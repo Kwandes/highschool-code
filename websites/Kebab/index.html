@@ -1,0 +1,152 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	
+	<title>Kebab Station</title>
+	
+	<meta name="description" content="Kebab Station" />
+	<meta name="keywords" content="Kebab, kebab" />
+	<link rel="stylesheet" href="style.css" text="text/css" />
+	<link href="https://fonts.googleapis.com/css?family=Indie+Flower" rel="stylesheet">
+	
+</head>
+
+<body>
+	
+	<div class="Container">
+		<div class="Topbar">
+			<div class="Logo">
+				<div class="Information">
+					<span style="font-size:35px;"><strong>DOSTAWA NA TELEFON </br>
+					[22] 468 07 68</strong></span> </br>
+					ul. Płowiecka 74/ tel. [22] 468 07 68, 511 54 77 45 </br>
+					Zapraszamy w godzinach 10-22 oraz w niedzielę 12-22 </br>
+					Dostawy realizujemy od pon. do sob. w godz. 10-21	</br>
+				</div>
+				<div class="LogoImage">
+				</div>
+				<div style="clear:both;"></div>
+			</div>
+		</div>
+		
+		<div class="Menu">
+			<div class="Options">
+				<div class="MenuOption">
+					Stacja Kebab
+				</div>
+				
+				<div class="MenuOption">
+					Menu
+				</div>
+				
+				<div class="MenuOption">
+					Dostawa
+				</div>
+				
+				<div class="MenuOption">
+					Mapa
+				</div>
+				
+				<div class="MenuOption">
+					Kontakt
+				</div>
+				
+				<div style="clear:both;"></div>
+			</div>
+		</div>
+		
+		<div class="Display">
+			<div class="Sidebar">
+				<div class="Suboption">
+					<img src="img/QRcolors.png" height="188" width="188">
+				</div>
+				<div class="Suboption">
+				</div>
+			</div>
+			<div class="Content">
+				<img src="img/kebab-offer-1.PNG" height="274" width="588">
+				<img src="img/kebab-offer-2.PNG" height="274" width="588">
+				<img src="img/kebab-offer-1.PNG" height="274" width="588">
+				<img src="img/kebab-offer-2.PNG" height="274" width="588">
+				<img src="img/kebab-offer-1.PNG" height="274" width="588">
+				<img src="img/kebab-offer-2.PNG" height="274" width="588">
+				<img src="img/kebab-offer-1.PNG" height="274" width="588">
+				<img src="img/kebab-offer-2.PNG" height="274" width="588">
+				
+			</div>
+			<div class="Sidebar">
+				<div class="Suboption">
+					<img src="img/QRcolors.png" height="188" width="188">
+				</div>
+				<div class="Suboption">
+					
+				</div>
+			</div>
+			
+			
+		</div>
+		
+		<div class="Footer">
+			<div class="Trademark">
+					Trademark
+			</div>
+			<div class="Delivery-info">
+				<div class="Deliveryinfo-price">
+					<span style="vertical-align:middle;">
+					</br>
+					Minimalny koszt</br>
+					zamówienia 25zł
+					</span>
+				</div>
+				<div class="Deliveryinfo-time">
+					<span style="vertical-align:top;">
+					DOSTAWA NA TELEFON</br>
+					Dostawy realizujemy od pon. do sob.</br>
+					w godz. 10-21
+					</span>
+				</div>
+				<div class="Deliveryinfo-where">
+					<span style="vertical-align:middle;font-size:18px;">
+					Dostawy na terenie:</br>
+					ANIN, WAWER, SADUL, LAS, MARYSIN WAWERSKI,</br>
+					GOCŁAWEK, MIĘDZYLESIE, ZERZEŃ</br>
+					Koszt dostawy 3zł.
+					</span>
+				</div>
+				<div style="clear:both;"></div>
+			</div>
+		</div>
+		
+	</div>
+	
+	<script src="jquery-3.1.1.min.js"></script>
+		 
+	<script>
+	 
+		$(document).ready(function() {
+		var NavY = $('.Menu').offset().top;
+		  
+		var stickyNav = function(){
+		var ScrollY = $(window).scrollTop();
+			   
+		if (ScrollY > NavY) { 
+			$('.Menu').addClass('sticky');
+		} else {
+			$('.Menu').removeClass('sticky'); 
+		}
+		};
+		  
+		stickyNav();
+		  
+		$(window).scroll(function() {
+			stickyNav();
+		});
+		});
+		 
+	</script>
+
+
+</body>
+</html>

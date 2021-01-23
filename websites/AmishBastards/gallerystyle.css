@@ -1,0 +1,33 @@
+
+.Image
+{
+	height: 400px;
+	width: 460px;
+	float:left;
+	padding: 5px;
+}
+.Member
+{
+	width:290px;
+	height:400px;
+	padding:10px;
+
+	float:left; 
+	font-size: 20px;
+	text-align: justify;
+}
+.Description
+{
+	background-color: #4668b3;
+	border: 3px solid #93c748
+}
+#Menu
+{
+	height: 1729px;
+}
+.ImageGallery
+{
+	height: 480px;
+	width: 720px;
+	padding: 5px;
+}

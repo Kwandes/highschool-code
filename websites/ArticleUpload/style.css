@@ -1,0 +1,65 @@
+body
+{
+	margin:0;
+	text-decoration:none;
+}
+#Logo
+{
+	width:100%;
+	text-align:center;
+	background-color:#5db4ff;
+	height:70px;
+}
+.LogoImage
+{
+	height:50px;
+	width:50px;
+	padding:10px;
+	float:left;
+}
+#Container
+{
+	text-align:center;
+	width:1000px;
+	margin-left:auto;
+	margin-right:auto;
+	border: 1px dotted red;
+}
+#TextInsert
+{
+	height:100px;
+	width:300px;
+}
+.TextDisplay
+{
+	display:inline-block;
+	padding-bottom:30px;
+	padding-top:10px;
+}
+#TextDisplayMain
+{
+	width:600px;
+	height:300px;
+	border:3px solid grey;
+	border-radius:30px;
+}
+.buffor
+{
+	width:50px;
+	border:20px solid black;
+	height:300px;
+}
+#Footer
+{
+	width:100%;
+	text-align:center;
+	background-color:#5db4ff;
+}
+.stickyLogo
+{
+    width: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+}

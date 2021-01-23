@@ -1,0 +1,203 @@
+body
+{
+	background-color:#bcceda;
+	background-image:url(../grafika/placeholder.png);
+	margin:0px;
+	text-align:center;
+	font-family:'Asar', serif;
+}
+#container
+{
+	width:100%;
+}
+.InfoHeader
+{
+	background-color:#333333;
+	font-size:12px;
+	text-align:left;
+	color:#AAAAAA;
+	padding:5px;
+}
+.InfoHeaderOption
+{
+	float:left;
+}
+.InfoHeaderOption:hover
+{
+	color:#EEEEEE;
+}
+#header
+{
+	background-color:white;
+	background-image:url(../grafika/ocean.png);
+	width:100%;
+	height:121px;
+}
+.Title
+{
+	margin-left:10%;
+	font-color:#666666;
+	font-size:25px;
+	font-weight:bold;
+	float:left;
+	text-align:left;
+}
+#BigMenu
+{
+	margin-left:5%;
+	float:left;
+	margin-top:28px;
+	display:inline;
+}
+#SmallMenuOpen
+{
+	display:none;
+	font-size:30px;
+	height:30px;
+	width:30px;
+	margin-top:40px;
+	
+}
+#SmallMenuOpen:hover
+{
+	cursor:pointer;
+}
+#SmallMenuClose
+{
+	display:none;
+	font-size:30px;
+	height:30px;
+	width:30px;
+	margin-top:40px;
+	
+}
+#SmallMenuClose:hover
+{
+	cursor:pointer;
+}
+
+#testdiv
+{
+	display:inline;
+}
+.NavigationSet
+{
+	float:left;
+	display:inline-block;
+}
+.menuoption
+{
+	float:left;
+	font-color:#666666;
+	font-size:20px;
+	font-weight:bold;
+	padding-left:10px;
+	padding-right:10px;
+}
+a
+{
+	color:#333333;
+}
+.menuoption:hover
+{
+	color:#0896fe;
+	cursor: pointer;
+	font-size:22px;
+}
+.menuoption:link
+{
+	color:white;
+	text-decoration: none;
+}
+.menuoption:active
+{
+	color:white;
+	text-decoration: none;
+}
+#NavigationMenu
+{
+	text-align:left;
+	background-color:#EEEEEE;
+	display:none;
+	width:100%;
+}
+.NavigationOption
+{
+	margin-left:5%;
+	margin-top:3px;
+	margin-right:10px;
+	margin-bottom:3px;
+	font-color:#666666;
+	font-size:17px;
+	font-weight:bold;
+	padding:5px;
+	padding-left:20px;
+	padding-bottom:2px;
+	background-color:#DDDDDD;
+	height:35px;
+}
+.NavigationOption:first-child
+{
+		margin-top:0px;
+}
+.NavigationOption:hover
+{
+		background-color:#0896fe;
+		cursor:pointer;
+}
+#MainContent
+{
+	width:60%;
+	text-align:justify;
+	margin:auto;
+	padding:10px;
+	border:1px purple solid;
+}
+.Footer
+{
+	background-color:#272a2d;
+	width:100%;
+	left:0;
+}
+.Information
+{
+	float:left;
+	padding:15px;
+	font-size:14px;
+	width:400px;
+	color:#a6a8a9;
+	text-align:center;
+	letter-spacing:1px;
+}
+.Information:first-child
+{
+		margin-left:10%;
+}
+.FooterIcon
+{
+	display:table-cell;
+	height:120px;
+	width:120px;
+	font-size:120px;
+	background-color:black;
+	color:white;
+	padding:15px;
+}
+.FooterIcon:hover
+{
+	cursor:pointer;
+}
+.ExtraFooter
+{
+	background-color:#383b3e;
+	color:#a6a8a9;
+	font-size:13px;
+}
+.stickyLogo
+{
+    width: 100%;
+    position: fixed;
+	left: 0;
+    top: 0;
+    z-index: 100;
+}

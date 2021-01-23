@@ -1,0 +1,96 @@
+body
+{
+	background-color:grey;
+	color: white;
+}
+#page{
+	width:1000px;
+	height: 2000px;
+	border: 2px dotted black;
+}
+#black
+{	
+	background-color:black;
+	height: 50px;
+	font-size:20px;
+}
+#grey
+{
+	background-color:grey;
+	height: 50px;
+	font-size:20px;
+}
+#darkgrey
+{
+	background-color:#404040;
+	height: 50px;
+	font-size:20px;
+}
+#darkishgrey
+{
+	background-color:#292929;
+	height: 50px;
+	font-size:20px;
+}
+
+#ubuntu
+{
+	background-color:#ee5a32;
+	height: 50px;
+	font-size:20px;
+}
+#slightydarkgrey
+{
+	background-color:#666666;
+	height: 50px;
+	font-size:20px;
+}
+#redpinkish
+{
+	background-color:#d94348;
+	height: 50px;
+	font-size:20px;
+}
+#orange
+{
+	background-color:#f36742;	
+	height:50px;
+	font-size:20px;
+}
+#darkred
+{
+	background-color: #751b1b;
+	height: 50px;
+	dont-size: 20px;
+}
+
+#youtube
+{
+	background-color:#d94348;	
+	height:50px;
+	font-size:20px;
+}
+#facebook
+{
+	background-color:#4668b3;	
+	height:50px;
+	font-size:20px;
+}
+#gplus
+{
+	background-color:#d95333;	
+	height:50px;
+	font-size:20px;	
+}
+#twitter
+{
+	background-color:#3095d3;	
+	height:50px;
+	font-size:20px;		
+}
+#lightgreen
+{
+	background-color:#93c748;	
+	height:50px;
+	font-size:20px;
+}

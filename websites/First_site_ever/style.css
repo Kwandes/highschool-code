@@ -1,0 +1,81 @@
+body
+{
+	background-color:#f36742;
+	
+}
+
+#page
+{
+	background-color:#404040;
+	width: 1000px;
+	margin-left: auto;
+	margin-right: auto;
+	color:white;
+}
+
+#maintitle
+{
+	font-size: 44px;
+	text-align: center;
+	padding: 30x;
+	border-bottom: 3px dotted #74878b;
+	margin-bottom: 20px;
+}
+
+#menu
+{
+	background-color: black;
+	width:1000px;
+}
+
+.menuoption
+{
+	float: left;
+	width: 100px;
+	height: 25px;
+	font-size: 20px;
+	padding: 10px;
+	border-right: 2px dotted grey;
+	text-align: center;
+}
+.menuoption:hover
+{
+	background-color:#f36742;
+	cursor: pointer;
+}
+
+#picture
+{
+	height: 248px;
+	width: 900px;
+	padding: 50px;
+	text-align: center;
+}
+#footer
+{
+	text-align: center;
+	background-color: black;
+}
+#login
+{
+	background-color: #black;
+	padding: 10px;
+	text-align: center;
+	
+}
+#LoremIpsum
+{
+	text-align: justify;
+	font-size: 15px;
+	padding:40px;
+}
+#ContactInforJpg
+{
+	height: 1201px;
+	width: 640px;
+	padding-right: 180px;
+	padding-left: 180px;
+	padding-top: 50px;
+	padding-bottom: 20px;
+	text-align: center;
+}

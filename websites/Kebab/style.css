@@ -1,0 +1,135 @@
+body
+{
+	margin:0;
+	text-align:left;
+	color:white;
+}
+.Topbar
+{
+	background-color:#f26e21;
+	height:200px;
+	border-bottom:5px solid white;
+}
+.Logo
+{
+	margin-left:22%;
+	width:60%;
+	height:100%;
+}
+.Information
+{
+	color:white;
+	text-align:left;
+	width:500px;
+	height:160px;
+	padding:20px;
+	float:left;
+	font-size:22px;
+}
+.LogoImage
+{
+
+	background-image:url(img/kebablogo.png);
+	background-size:cover;
+	width:245px;
+	height:150px;
+	padding:10px;
+	float:left;
+}
+.Menu
+{
+	margin:auto;
+	background-color:red;
+	height:70px;
+	font-size:24px;
+}
+.MenuOption
+{
+	margin-top:10px;
+	background-color:#f26e21;
+	cursor:pointer;
+	float:left;
+	padding:10px;
+	width:130px;
+	text-align:center;
+	border-right:2px dotted grey;
+}
+.MenuOption:first-child
+{
+	margin-left:25%;
+	border-left:2px dotted grey;
+}
+.MenuOption:hover
+{
+	background-color:#e15d10;
+}
+.Display
+{
+	border-top:5px solid white;
+	Margin-left:15%;
+	width:1050px;
+	overflow: auto;
+}	
+.Sidebar
+{
+	width:190px;
+	float:left;
+
+	text-align:center;
+}
+.Content
+{
+	width:608px;
+	padding:20px;
+	overflow: auto;
+	float:left;
+	text-align:center;
+	border-left:1px solid #666666;
+	border-right:1px solid #666666;
+}
+.Footer
+{
+	background-color:#666666;
+	text-align:center;
+	font-size:20px;
+}
+.Trademark
+{
+	background-color:#f26e21;
+	padding:5px;
+}
+.Delivery-info
+{
+	padding:15px;
+	font-family: 'Indie Flower', cursive;
+}
+.Deliveryinfo-price
+{
+	float:left;
+	padding:10px;
+	margin-left:25%;
+	
+}
+.Deliveryinfo-time
+{
+	float:left;
+	padding:10px;
+	margin-left:60px;
+}
+.Deliveryinfo-where
+{
+	float:left;
+	padding:10px;
+}
+.Container
+{
+	overflow:auto;
+}
+.sticky
+{
+    width: 100%;
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 100;
+}
