@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1508422358 source:c:\users\jbogoryja\desktop\ascii test\main.cpp
+	<iostream>
+	<string>
+
+1508421204 source:c:\users\jbogoryja\desktop\ascii test\poprawa.cpp
+	<iostream>
+
