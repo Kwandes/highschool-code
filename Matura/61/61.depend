@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1524606482 source:x:\programming\matura\61\main.cpp
+	<iostream>
+	<fstream>
+	<vector>
+
