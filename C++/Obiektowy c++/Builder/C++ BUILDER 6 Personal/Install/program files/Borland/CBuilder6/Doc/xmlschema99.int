@@ -1,0 +1,60 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{       Importer for legacy XML Schema files            }
+{                                                       }
+{ Copyright (c) 2000-2001 Borland Software Corporation  }
+{                                                       }
+{*******************************************************}
+
+unit XMLSchema99;
+
+interface
+
+uses SysUtils, XMLSchema, xmldom, XMLDoc, XMLIntf;
+
+type
+
+{ TXMLSchema1999TranslatorFactory }
+
+  TXMLSchema1999TranslatorFactory = class(TXMLSchemaTranslatorFactory)
+  protected
+    function CanImportFile(const FileName: WideString): Boolean; override;
+  end;
+
+{ TXMLSchema1999Translator }
+
+  TXMLSchema1999Translator = class(TXMLSchemaTranslator)
+  protected
+    procedure CopyAttrNodes(const SourceNode, DestNode: IXMLNode);
+    procedure CopyChildNodes(const SourceNode, DestNode: IXMLNode);
+    procedure CopyComplexType(const ComplexTypeDef: IXMLComplexTypeDef;
+      const DestNode: IXMLNode);
+    procedure CopySimpleType(const SimpleTypeDef: IXMLSimpleTypeDef;
+      const DestNode: IXMLNode);
+    { Data member access }
+    property OldSchema: IXMLSchemaDef;
+  public
+    procedure Translate(const FileName: WideString; const SchemaDef: IXMLSchemaDef); override;
+  end;
+
+{ TXMLComplexTypeDef99 }
+
+  TXMLComplexTypeDef99 = class(TXMLComplexTypeDef)
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLSchemaDoc99 }
+
+  TXMLSchemaDoc99 = class(TXMLSchemaDoc)
+  protected
+    function GetChildNodeClass(const Node: IDOMNode): TXMLNodeClass; override;
+    procedure CheckSchemaVersion; override;
+    procedure LoadData; override;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+implementation

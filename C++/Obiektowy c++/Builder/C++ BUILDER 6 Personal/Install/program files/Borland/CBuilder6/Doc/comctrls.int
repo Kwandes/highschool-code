@@ -1,0 +1,2677 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1996-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit ComCtrls;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses Messages, Windows, SysUtils, CommCtrl, Controls, Forms, Classes,
+  Menus, Graphics, StdCtrls, RichEdit, ToolWin, ImgList, ExtCtrls, ListActns;
+
+type
+  THitTest = (htAbove, htBelow, htNowhere, htOnItem, htOnButton, htOnIcon,
+    htOnIndent, htOnLabel, htOnRight, htOnStateIcon, htToLeft, htToRight);
+  THitTests = set of THitTest;
+
+  TCustomTabControl = class;
+
+  TTabChangingEvent = procedure(Sender: TObject;
+    var AllowChange: Boolean) of object;
+
+  TTabPosition = (tpTop, tpBottom, tpLeft, tpRight);
+
+  TTabStyle = (tsTabs, tsButtons, tsFlatButtons);
+
+  TDrawTabEvent = procedure(Control: TCustomTabControl; TabIndex: Integer;
+    const Rect: TRect; Active: Boolean) of object;
+  TTabGetImageEvent = procedure(Sender: TObject; TabIndex: Integer;
+    var ImageIndex: Integer) of object;
+
+  TCustomTabControl = class(TWinControl)
+  protected
+    procedure AdjustClientRect(var Rect: TRect); override;
+    function CanChange: Boolean; dynamic;
+    function CanShowTab(TabIndex: Integer): Boolean; virtual;
+    procedure Change; dynamic;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DrawTab(TabIndex: Integer; const Rect: TRect; Active: Boolean); virtual;
+    function GetImageIndex(TabIndex: Integer): Integer; virtual;
+    procedure Loaded; override;
+    procedure UpdateTabImages;
+    property DisplayRect: TRect;
+    property HotTrack: Boolean default False;
+    property Images: TCustomImageList;
+    property MultiLine: Boolean default False;
+    property MultiSelect: Boolean default False;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    property OwnerDraw: Boolean default False;
+    property RaggedRight: Boolean default False;
+    property ScrollOpposite: Boolean default False;
+    property Style: TTabStyle default tsTabs;
+    property TabHeight: Smallint default 0;
+    property TabIndex: Integer default -1;
+    property TabPosition: TTabPosition default tpTop;
+    property Tabs: TStrings;
+    property TabWidth: Smallint default 0;
+    property OnChange: TNotifyEvent;
+    property OnChanging: TTabChangingEvent;
+    property OnDrawTab: TDrawTabEvent;
+    property OnGetImageIndex: TTabGetImageEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function IndexOfTabAt(X, Y: Integer): Integer;
+    function GetHitTestInfoAt(X, Y: Integer): THitTests;
+    function TabRect(Index: Integer): TRect;
+    function RowCount: Integer;
+    procedure ScrollTabs(Delta: Integer);
+    property Canvas: TCanvas;
+    property TabStop default True;
+  end;
+
+  TTabControl = class(TCustomTabControl)
+  public
+    property DisplayRect;
+  published
+    property Align;
+    property Anchors;
+    property BiDiMode;
+    property Constraints;
+    property DockSite;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property HotTrack;
+    property Images;
+    property MultiLine;
+    property MultiSelect;
+    property OwnerDraw;
+    property ParentBiDiMode;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property RaggedRight;
+    property ScrollOpposite;
+    property ShowHint;
+    property Style;
+    property TabHeight;
+    property TabOrder;
+    property TabPosition;
+    property Tabs;
+    property TabIndex;  // must be after Tabs
+    property TabStop;
+    property TabWidth;
+    property Visible;
+    property OnChange;
+    property OnChanging;
+    property OnContextPopup;
+    property OnDockDrop;
+    property OnDockOver;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDrawTab;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGetImageIndex;
+    property OnGetSiteInfo;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnUnDock;
+  end;
+
+  TPageControl = class;
+
+  TTabSheet = class(TWinControl)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure DoHide; dynamic;
+    procedure DoShow; dynamic;
+    procedure ReadState(Reader: TReader); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property PageControl: TPageControl;
+    property TabIndex: Integer;
+  published
+    property BorderWidth;
+    property Caption;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property Height stored False;
+    property Highlighted: Boolean default False;
+    property ImageIndex: TImageIndex default 0;
+    property Left stored False;
+    property Constraints;
+    property PageIndex: Integer;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabVisible: Boolean default True;
+    property Top stored False;
+    property Visible stored False;
+    property Width stored False;
+    property OnContextPopup;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnHide: TNotifyEvent;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnShow: TNotifyEvent;
+    property OnStartDrag;
+  end;
+
+  TPageControl = class(TCustomTabControl)
+  protected
+    function CanShowTab(TabIndex: Integer): Boolean; override;
+    procedure Change; override;
+    procedure DoAddDockClient(Client: TControl; const ARect: TRect); override;
+    procedure DockOver(Source: TDragDockObject; X, Y: Integer;
+      State: TDragState; var Accept: Boolean); override;
+    procedure DoRemoveDockClient(Client: TControl); override;
+    procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
+    function GetImageIndex(TabIndex: Integer): Integer; override;
+    function GetPageFromDockClient(Client: TControl): TTabSheet;
+    procedure GetSiteInfo(Client: TControl; var InfluenceRect: TRect;
+      MousePos: TPoint; var CanDock: Boolean); override;
+    procedure Loaded; override;
+    procedure SetChildOrder(Child: TComponent; Order: Integer); override;
+    procedure ShowControl(AControl: TControl); override;
+    procedure UpdateActivePage; virtual;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function FindNextPage(CurPage: TTabSheet;
+      GoForward, CheckTabVisible: Boolean): TTabSheet;
+    procedure SelectNextPage(GoForward: Boolean; CheckTabVisible: Boolean = True);
+    property ActivePageIndex: Integer;
+    property PageCount: Integer;
+    property Pages[Index: Integer]: TTabSheet;
+  published
+    property ActivePage: TTabSheet;
+    property Align;
+    property Anchors;
+    property BiDiMode;
+    property Constraints;
+    property DockSite;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property HotTrack;
+    property Images;
+    property MultiLine;
+    property OwnerDraw;
+    property ParentBiDiMode;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property RaggedRight;
+    property ScrollOpposite;
+    property ShowHint;
+    property Style;
+    property TabHeight;
+    property TabIndex;
+    property TabOrder;
+    property TabPosition;
+    property TabStop;
+    property TabWidth;
+    property Visible;
+    property OnChange;
+    property OnChanging;
+    property OnContextPopup;
+    property OnDockDrop;
+    property OnDockOver;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDrawTab;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGetImageIndex;
+    property OnGetSiteInfo;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnUnDock;
+  end;
+
+{ TCustomStatusBar }
+
+  TCustomStatusBar = class;
+  TStatusPanels = class;
+  TStatusPanelStyle = (psText, psOwnerDraw);
+  TStatusPanelBevel = (pbNone, pbLowered, pbRaised);
+  TStatusPanelClass = class of TStatusPanel;
+
+  TStatusPanel = class(TCollectionItem)
+  protected
+    function GetDisplayName: string; override;
+  public
+    constructor Create(Collection: TCollection); override;
+    procedure Assign(Source: TPersistent); override;
+    procedure ParentBiDiModeChanged;
+    function UseRightToLeftAlignment: Boolean;
+    function UseRightToLeftReading: Boolean;
+  published
+    property Alignment: TAlignment default taLeftJustify;
+    property Bevel: TStatusPanelBevel default pbLowered;
+    property BiDiMode: TBiDiMode;
+    property ParentBiDiMode: Boolean default True;
+    property Style: TStatusPanelStyle default psText;
+    property Text: string;
+    property Width: Integer;
+  end;
+
+  TStatusPanels = class(TCollection)
+  protected
+    function GetOwner: TPersistent; override;
+    procedure Update(Item: TCollectionItem); override;
+  public
+    constructor Create(StatusBar: TCustomStatusBar);
+    function Add: TStatusPanel;
+    function AddItem(Item: TStatusPanel; Index: Integer): TStatusPanel;
+    function Insert(Index: Integer): TStatusPanel;
+    property Items[Index: Integer]: TStatusPanel; default;
+  end;
+
+  TCustomDrawPanelEvent = procedure(StatusBar: TCustomStatusBar; Panel: TStatusPanel;
+    const Rect: TRect) of object;
+  TSBCreatePanelClassEvent = procedure(Sender: TCustomStatusBar;
+    var PanelClass: TStatusPanelClass) of object;
+
+  TCustomStatusBar = class(TWinControl)
+  protected
+    procedure ChangeScale(M, D: Integer); override;
+    function CreatePanel: TStatusPanel; virtual;
+    function CreatePanels: TStatusPanels; virtual;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    function DoHint: Boolean; virtual;
+    procedure DrawPanel(Panel: TStatusPanel; const Rect: TRect); dynamic;
+    function GetPanelClass: TStatusPanelClass; virtual;
+    function IsFontStored: Boolean;
+    procedure SetParent(AParent: TWinControl); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function ExecuteAction(Action: TBasicAction): Boolean; override;
+    procedure FlipChildren(AllLevels: Boolean); override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+    property Canvas: TCanvas;
+    property AutoHint: Boolean;
+    property Panels: TStatusPanels;
+    property SimplePanel: Boolean;
+    property SimpleText: string;
+    property SizeGrip: Boolean;
+    property UseSystemFont: Boolean;
+    property OnCreatePanelClass: TSBCreatePanelClassEvent;
+    property OnHint: TNotifyEvent;
+    property OnDrawPanel: TCustomDrawPanelEvent;
+  end;
+
+{ TStatusBar }
+
+  TStatusBar = class;
+
+  TDrawPanelEvent = procedure(StatusBar: TStatusBar; Panel: TStatusPanel;
+    const Rect: TRect) of object;
+
+  TStatusBar = class(TCustomStatusBar)
+  published
+    property Action;
+    property AutoHint default False;
+    property Align default alBottom;
+    property Anchors;
+    property BiDiMode;
+    property BorderWidth;
+    property Color default clBtnFace;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font stored IsFontStored;
+    property Constraints;
+    property Panels;
+    property ParentBiDiMode;
+    property ParentColor default False;
+    property ParentFont default False;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property SimplePanel;
+    property SimpleText;
+    property SizeGrip default True;
+    property UseSystemFont default True;
+    property Visible;
+    property OnClick;
+    property OnContextPopup;
+    property OnCreatePanelClass;    
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnHint;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    // Required for backwards compatibility with the old event signature
+    property OnDrawPanel: TDrawPanelEvent;
+    property OnResize;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ Custom draw }
+
+  TCustomDrawTarget = (dtControl, dtItem, dtSubItem);
+  TCustomDrawStage = (cdPrePaint, cdPostPaint, cdPreErase, cdPostErase);
+  TCustomDrawState = set of (cdsSelected, cdsGrayed, cdsDisabled, cdsChecked,
+    cdsFocused, cdsDefault, cdsHot, cdsMarked, cdsIndeterminate);
+
+{ TCustomHeaderControl }
+
+  TCustomHeaderControl = class;
+  
+{ THeaderControl }
+
+  THeaderControl = class;
+
+  THeaderSectionStyle = (hsText, hsOwnerDraw);
+  THeaderSectionClass = class of THeaderSection;
+
+  THeaderSection = class(TCollectionItem)
+  protected
+    function GetDisplayName: string; override;
+  public
+    constructor Create(Collection: TCollection); override;
+    procedure Assign(Source: TPersistent); override;
+    procedure ParentBiDiModeChanged;
+    function UseRightToLeftAlignment: Boolean;
+    function UseRightToLeftReading: Boolean;
+    property Left: Integer;
+    property Right: Integer;
+  published
+    property Alignment: TAlignment default taLeftJustify;
+    property AllowClick: Boolean default True;
+    property AutoSize: Boolean default False;
+    property BiDiMode: TBiDiMode;
+    property ImageIndex: TImageIndex;
+    property MaxWidth: Integer default 10000;
+    property MinWidth: Integer default 0;
+    property ParentBiDiMode: Boolean default True;
+    property Style: THeaderSectionStyle default hsText;
+    property Text: string;
+    property Width: Integer;
+  end;
+
+  THeaderSections = class(TCollection)
+  protected
+    function GetOwner: TPersistent; override;
+    procedure Update(Item: TCollectionItem); override;
+  public
+    constructor Create(HeaderControl: TCustomHeaderControl);
+    function Add: THeaderSection;
+    function AddItem(Item: THeaderSection; Index: Integer): THeaderSection;
+    function Insert(Index: Integer): THeaderSection;
+    property Items[Index: Integer]: THeaderSection; default;
+  end;
+
+  TSectionTrackState = (tsTrackBegin, tsTrackMove, tsTrackEnd);
+
+  TCustomDrawSectionEvent = procedure(HeaderControl: TCustomHeaderControl;
+    Section: THeaderSection; const Rect: TRect; Pressed: Boolean) of object;
+  TCustomSectionNotifyEvent = procedure(HeaderControl: TCustomHeaderControl;
+    Section: THeaderSection) of object;
+  TCustomSectionTrackEvent = procedure(HeaderControl: TCustomHeaderControl;
+    Section: THeaderSection; Width: Integer;
+    State: TSectionTrackState) of object;
+  TSectionDragEvent = procedure (Sender: TObject; FromSection, ToSection: THeaderSection;
+    var AllowDrag: Boolean) of object;
+  TCustomHCCreateSectionClassEvent = procedure(Sender: TCustomHeaderControl;
+    var SectionClass: THeaderSectionClass) of object;
+
+  THeaderStyle = (hsButtons, hsFlat);
+
+  TCustomHeaderControl = class(TWinControl)
+  protected
+    function CreateSection: THeaderSection; virtual;
+    function CreateSections: THeaderSections; virtual;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    procedure DrawSection(Section: THeaderSection; const Rect: TRect;
+      Pressed: Boolean); dynamic;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SectionClick(Section: THeaderSection); dynamic;
+    procedure SectionDrag(FromSection, ToSection: THeaderSection; var AllowDrag: Boolean); dynamic;
+    procedure SectionEndDrag; dynamic;
+    procedure SectionResize(Section: THeaderSection); dynamic;
+    procedure SectionTrack(Section: THeaderSection; Width: Integer;
+      State: TSectionTrackState); dynamic;
+    procedure SetImages(Value: TCustomImageList); virtual;
+    procedure WndProc(var Message: TMessage); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property Canvas: TCanvas;
+    procedure FlipChildren(AllLevels: Boolean); override;
+  published
+    property Align default alTop;
+    property Anchors;
+    property BiDiMode;
+    property BorderWidth;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property DragReorder: Boolean;
+    property FullDrag: Boolean;
+    property HotTrack: Boolean;
+    property Enabled;
+    property Font;
+    property Images: TCustomImageList;
+    property Constraints;
+    property Sections: THeaderSections;
+    property Style: THeaderStyle;
+    property OnCreateSectionClass: TCustomHCCreateSectionClassEvent;
+    property OnDrawSection: TCustomDrawSectionEvent;
+    property OnSectionClick: TCustomSectionNotifyEvent;
+    property OnSectionDrag: TSectionDragEvent;
+    property OnSectionEndDrag: TNotifyEvent;
+    property OnSectionResize: TCustomSectionNotifyEvent;
+    property OnSectionTrack: TCustomSectionTrackEvent;
+  end;
+
+{ THeaderControl }
+
+  TDrawSectionEvent = procedure(HeaderControl: THeaderControl;
+    Section: THeaderSection; const Rect: TRect; Pressed: Boolean) of object;
+  TSectionNotifyEvent = procedure(HeaderControl: THeaderControl;
+    Section: THeaderSection) of object;
+  TSectionTrackEvent = procedure(HeaderControl: THeaderControl;
+    Section: THeaderSection; Width: Integer;
+    State: TSectionTrackState) of object;
+  THCCreateSectionClassEvent = procedure(Sender: THeaderControl;
+    var SectionClass: THeaderSectionClass) of object;
+
+  THeaderControl = class(TCustomHeaderControl)
+  published
+    property Align default alTop;
+    property Anchors;
+    property BiDiMode;
+    property BorderWidth;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property DragReorder;
+    property Enabled;
+    property Font;
+    property FullDrag default True;
+    property HotTrack default False;
+    property Images;
+    property Constraints;
+    property Sections;
+    property ShowHint;
+    property Style default hsButtons;
+    property ParentBiDiMode;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property Visible;
+    property OnContextPopup;
+    property OnCreateSectionClass;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    // Required for backwards compatibility with the old events
+    property OnDrawSection: TDrawSectionEvent;
+    property OnSectionClick: TSectionNotifyEvent;
+    property OnSectionResize: TSectionNotifyEvent;
+    property OnSectionTrack: TSectionTrackEvent;
+    property OnSectionDrag;
+    property OnSectionEndDrag;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TTreeNode }
+
+  TCustomTreeView = class;
+  TTreeNodes = class;
+
+  TNodeState = (nsCut, nsDropHilited, nsFocused, nsSelected, nsExpanded);
+  TNodeAttachMode = (naAdd, naAddFirst, naAddChild, naAddChildFirst, naInsert);
+  TAddMode = (taAddFirst, taAdd, taInsert);
+
+  PNodeInfo = ^TNodeInfo;
+  TNodeInfo = packed record
+    ImageIndex: Integer;
+    SelectedIndex: Integer;
+    StateIndex: Integer;
+    OverlayIndex: Integer;
+    Data: Pointer;
+    Count: Integer;
+    Text: string[255];
+  end;
+
+  TTreeNodeClass = class of TTreeNode;
+  TTreeNode = class(TPersistent)
+  protected
+    function GetState(NodeState: TNodeState): Boolean;
+    procedure SetState(NodeState: TNodeState; Value: Boolean);
+    procedure SetSelectedBit(Value: Boolean);
+  public
+    constructor Create(AOwner: TTreeNodes);
+    destructor Destroy; override;
+    function AlphaSort(ARecurse: Boolean = False): Boolean;
+    procedure Assign(Source: TPersistent); override;
+    procedure Collapse(Recurse: Boolean);
+    function CustomSort(SortProc: TTVCompare; Data: Longint; ARecurse: Boolean = False): Boolean;
+    procedure Delete;
+    procedure DeleteChildren;
+    function DisplayRect(TextOnly: Boolean): TRect;
+    function EditText: Boolean;
+    procedure EndEdit(Cancel: Boolean);
+    procedure Expand(Recurse: Boolean);
+    function getFirstChild: TTreeNode; {GetFirstChild conflicts with C++ macro}
+    function GetHandle: HWND;
+    function GetLastChild: TTreeNode;
+    function GetNext: TTreeNode;
+    function GetNextChild(Value: TTreeNode): TTreeNode;
+    function getNextSibling: TTreeNode; {GetNextSibling conflicts with C++ macro}
+    function GetNextVisible: TTreeNode;
+    function GetPrev: TTreeNode;
+    function GetPrevChild(Value: TTreeNode): TTreeNode;
+    function getPrevSibling: TTreeNode; {GetPrevSibling conflicts with a C++ macro}
+    function GetPrevVisible: TTreeNode;
+    function HasAsParent(Value: TTreeNode): Boolean;
+    function IndexOf(Value: TTreeNode): Integer;
+    procedure MakeVisible;
+    procedure MoveTo(Destination: TTreeNode; Mode: TNodeAttachMode); virtual;
+    property AbsoluteIndex: Integer;
+    function IsFirstNode: Boolean;
+    property Count: Integer;
+    property Cut: Boolean;
+    property Data: Pointer;
+    property Deleting: Boolean;
+    property Focused: Boolean;
+    property DropTarget: Boolean;
+    property Selected: Boolean;
+    property Expanded: Boolean;
+    property Handle: HWND;
+    property HasChildren: Boolean;
+    property ImageIndex: TImageIndex;
+    property Index: Integer;
+    property IsVisible: Boolean;
+    property Item[Index: Integer]: TTreeNode; default;
+    property ItemId: HTreeItem;
+    property Level: Integer;
+    property OverlayIndex: Integer;
+    property Owner: TTreeNodes;
+    property Parent: TTreeNode;
+    property SelectedIndex: Integer;
+    property StateIndex: Integer;
+    property Text: string;
+    property TreeView: TCustomTreeView;
+  end;
+
+{ TTreeNodes }
+
+  PNodeCache = ^TNodeCache;
+  TNodeCache = record
+    CacheNode: TTreeNode;
+    CacheIndex: Integer;
+  end;
+
+  TTreeNodes = class(TPersistent)
+  protected
+    function AddItem(Parent, Target: HTreeItem; const Item: TTVItem;
+      AddMode: TAddMode): HTreeItem;
+    procedure DefineProperties(Filer: TFiler); override;
+    function CreateItem(Node: TTreeNode): TTVItem;
+    function GetCount: Integer;
+    procedure SetItem(Index: Integer; Value: TTreeNode);
+    procedure SetUpdateState(Updating: Boolean);
+    property Reading: Boolean;
+  public
+    constructor Create(AOwner: TCustomTreeView);
+    destructor Destroy; override;
+    function AddChildFirst(Parent: TTreeNode; const S: string): TTreeNode;
+    function AddChild(Parent: TTreeNode; const S: string): TTreeNode;
+    function AddChildObjectFirst(Parent: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    function AddChildObject(Parent: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    function AddFirst(Sibling: TTreeNode; const S: string): TTreeNode;
+    function Add(Sibling: TTreeNode; const S: string): TTreeNode;
+    function AddObjectFirst(Sibling: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    function AddObject(Sibling: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    function AddNode(Node, Relative: TTreeNode; const S: string;
+      Ptr: Pointer; Method: TNodeAttachMode): TTreeNode;
+    function AlphaSort(ARecurse: Boolean = False): Boolean;
+    procedure Assign(Source: TPersistent); override;
+    procedure BeginUpdate;
+    procedure Clear;
+    function CustomSort(SortProc: TTVCompare; Data: Longint; ARecurse: Boolean = False): Boolean;
+    procedure Delete(Node: TTreeNode);
+    procedure EndUpdate;
+    function GetFirstNode: TTreeNode;
+    function GetNode(ItemId: HTreeItem): TTreeNode;
+    function Insert(Sibling: TTreeNode; const S: string): TTreeNode;
+    function InsertObject(Sibling: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    function InsertNode(Node, Sibling: TTreeNode; const S: string;
+      Ptr: Pointer): TTreeNode;
+    property Count: Integer;
+    property Handle: HWND;
+    property Item[Index: Integer]: TTreeNode; default;
+    property Owner: TCustomTreeView;
+  end;
+
+{ TCustomTreeView }
+
+  TSortType = (stNone, stData, stText, stBoth);
+  TMultiSelectStyles = (msControlSelect, msShiftSelect,
+                        msVisibleOnly, msSiblingOnly);
+  TMultiSelectStyle = set of TMultiSelectStyles;
+  ETreeViewError = class(Exception);
+
+  TTVChangingEvent = procedure(Sender: TObject; Node: TTreeNode;
+    var AllowChange: Boolean) of object;
+  TTVChangedEvent = procedure(Sender: TObject; Node: TTreeNode) of object;
+  TTVEditingEvent = procedure(Sender: TObject; Node: TTreeNode;
+    var AllowEdit: Boolean) of object;
+  TTVEditedEvent = procedure(Sender: TObject; Node: TTreeNode; var S: string) of object;
+  TTVExpandingEvent = procedure(Sender: TObject; Node: TTreeNode;
+    var AllowExpansion: Boolean) of object;
+  TTVCollapsingEvent = procedure(Sender: TObject; Node: TTreeNode;
+    var AllowCollapse: Boolean) of object;
+  TTVExpandedEvent = procedure(Sender: TObject; Node: TTreeNode) of object;
+  TTVCompareEvent = procedure(Sender: TObject; Node1, Node2: TTreeNode;
+    Data: Integer; var Compare: Integer) of object;
+  TTVCustomDrawEvent = procedure(Sender: TCustomTreeView; const ARect: TRect;
+    var DefaultDraw: Boolean) of object;
+  TTVCustomDrawItemEvent = procedure(Sender: TCustomTreeView; Node: TTreeNode;
+    State: TCustomDrawState; var DefaultDraw: Boolean) of object;
+  TTVAdvancedCustomDrawEvent = procedure(Sender: TCustomTreeView; const ARect: TRect;
+    Stage: TCustomDrawStage; var DefaultDraw: Boolean) of object;
+  TTVAdvancedCustomDrawItemEvent = procedure(Sender: TCustomTreeView; Node: TTreeNode;
+    State: TCustomDrawState; Stage: TCustomDrawStage; var PaintImages,
+    DefaultDraw: Boolean) of object;
+  TTVCreateNodeClassEvent = procedure(Sender: TCustomTreeView;
+    var NodeClass: TTreeNodeClass) of object;
+
+  TCustomTreeView = class(TWinControl)
+  protected
+    FChangeTimer: TTimer;
+    function CanEdit(Node: TTreeNode): Boolean; dynamic;
+    function CanChange(Node: TTreeNode): Boolean; dynamic;
+    function CanCollapse(Node: TTreeNode): Boolean; dynamic;
+    function CanExpand(Node: TTreeNode): Boolean; dynamic;
+    procedure Change(Node: TTreeNode); dynamic;
+    procedure Collapse(Node: TTreeNode); dynamic;
+    function CreateNode: TTreeNode; virtual;
+    function CreateNodes: TTreeNodes; virtual;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    function CustomDraw(const ARect: TRect; Stage: TCustomDrawStage): Boolean; virtual;
+    function CustomDrawItem(Node: TTreeNode; State: TCustomDrawState;
+      Stage: TCustomDrawStage; var PaintImages: Boolean): Boolean; virtual;
+    procedure Delete(Node: TTreeNode); dynamic;
+    procedure Added(Node: TTreeNode); dynamic;
+    procedure DestroyWnd; override;
+    procedure DoEndDrag(Target: TObject; X, Y: Integer); override;
+    procedure DoStartDrag(var DragObject: TDragObject); override;
+    procedure Edit(const Item: TTVItem); dynamic;
+    procedure Expand(Node: TTreeNode); dynamic;
+    function GetDragImages: TDragImageList; override;
+    procedure GetImageIndex(Node: TTreeNode); virtual;
+    procedure GetSelectedIndex(Node: TTreeNode); virtual;
+    function IsCustomDrawn(Target: TCustomDrawTarget; Stage: TCustomDrawStage): Boolean; virtual;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent;
+      Operation: TOperation); override;
+    procedure SetDragMode(Value: TDragMode); override;
+    procedure WndProc(var Message: TMessage); override;
+    procedure ValidateSelection;
+    procedure InvalidateSelectionsRects;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure DoEnter; override;
+    procedure DoExit; override;
+    property AutoExpand: Boolean default False;
+    property BorderStyle: TBorderStyle default bsSingle;
+    property ChangeDelay: Integer default 0;
+    property CreateWndRestores: Boolean default True;
+    property HideSelection: Boolean default True;
+    property HotTrack: Boolean default False;
+    property Images: TCustomImageList;
+    property Indent: Integer;
+    property Items: TTreeNodes;
+    property MultiSelect: Boolean default False;
+    property MultiSelectStyle: TMultiSelectStyle default [msControlSelect];
+    property ReadOnly: Boolean default False;
+    property RightClickSelect: Boolean default False;
+    property RowSelect: Boolean default False;
+    property ShowButtons: Boolean default True;
+    property ShowLines: Boolean default True;
+    property ShowRoot: Boolean default True;
+    property SortType: TSortType default stNone;
+    property StateImages: TCustomImageList;
+    property ToolTips: Boolean default True;
+    property OnAddition: TTVExpandedEvent;
+    property OnAdvancedCustomDraw: TTVAdvancedCustomDrawEvent;
+    property OnAdvancedCustomDrawItem: TTVAdvancedCustomDrawItemEvent;
+    property OnCancelEdit: TTVChangedEvent;
+    property OnChange: TTVChangedEvent;
+    property OnChanging: TTVChangingEvent;
+    property OnCollapsed: TTVExpandedEvent;
+    property OnCollapsing: TTVCollapsingEvent;
+    property OnCompare: TTVCompareEvent;
+    property OnCustomDraw: TTVCustomDrawEvent;
+    property OnCustomDrawItem: TTVCustomDrawItemEvent;
+    property OnDeletion: TTVExpandedEvent;
+    property OnEditing: TTVEditingEvent;
+    property OnEdited: TTVEditedEvent;
+    property OnExpanding: TTVExpandingEvent;
+    property OnExpanded: TTVExpandedEvent;
+    property OnGetImageIndex: TTVExpandedEvent;
+    property OnGetSelectedIndex: TTVExpandedEvent;
+    property OnCreateNodeClass: TTVCreateNodeClassEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function AlphaSort(ARecurse: Boolean = True): Boolean;
+    function CustomSort(SortProc: TTVCompare; Data: Longint; ARecurse: Boolean = True): Boolean;
+    procedure FullCollapse;
+    procedure FullExpand;
+    function GetHitTestInfoAt(X, Y: Integer): THitTests;
+    function GetNodeAt(X, Y: Integer): TTreeNode;
+    function IsEditing: Boolean;
+    procedure LoadFromFile(const FileName: string);
+    procedure LoadFromStream(Stream: TStream);
+    procedure SaveToFile(const FileName: string);
+    procedure SaveToStream(Stream: TStream);
+    property Canvas: TCanvas;
+    property DropTarget: TTreeNode;
+    property Selected: TTreeNode;
+    property TopItem: TTreeNode;
+
+    procedure Select(Node: TTreeNode; ShiftState: TShiftState = []); overload; virtual;
+    procedure Select(const Nodes: array of TTreeNode); overload; virtual;
+    procedure Select(Nodes: TList); overload; virtual;
+    procedure Deselect(Node: TTreeNode); virtual;
+    procedure Subselect(Node: TTreeNode; Validate: Boolean = False); virtual;
+    property SelectionCount: Cardinal;
+    property Selections[Index: Integer]: TTreeNode;
+    procedure ClearSelection(KeepPrimary: Boolean = False); virtual;
+    function GetSelections(AList: TList): TTreeNode;
+    function FindNextToSelect: TTreeNode; virtual;
+  end;
+
+  TTreeView = class(TCustomTreeView)
+  published
+    property Align;
+    property Anchors;
+    property AutoExpand;
+    property BevelEdges;
+    property BevelInner;
+    property BevelOuter;
+    property BevelKind default bkNone;
+    property BevelWidth;
+    property BiDiMode;
+    property BorderStyle;
+    property BorderWidth;
+    property ChangeDelay;
+    property Color;
+    property Ctl3D;
+    property Constraints;
+    property DragKind;
+    property DragCursor;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property HideSelection;
+    property HotTrack;
+    property Images;
+    property Indent;
+    property MultiSelect;
+    property MultiSelectStyle;
+    property ParentBiDiMode;
+    property ParentColor default False;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ReadOnly;
+    property RightClickSelect;
+    property RowSelect;
+    property ShowButtons;
+    property ShowHint;
+    property ShowLines;
+    property ShowRoot;
+    property SortType;
+    property StateImages;
+    property TabOrder;
+    property TabStop default True;
+    property ToolTips;
+    property Visible;
+    property OnAddition;
+    property OnAdvancedCustomDraw;
+    property OnAdvancedCustomDrawItem;
+    property OnChange;
+    property OnChanging;
+    property OnClick;
+    property OnCollapsed;
+    property OnCollapsing;
+    property OnCompare;
+    property OnContextPopup;
+    property OnCreateNodeClass;
+    property OnCustomDraw;
+    property OnCustomDrawItem;
+    property OnDblClick;
+    property OnDeletion;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEdited;
+    property OnEditing;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnExpanding;
+    property OnExpanded;
+    property OnGetImageIndex;
+    property OnGetSelectedIndex;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDock;
+    property OnStartDrag;
+    { Items must be published after OnGetImageIndex and OnGetSelectedIndex }
+    property Items;
+  end;
+
+{ TTrackBar }
+
+  TTrackBarOrientation = (trHorizontal, trVertical);
+  TTickMark = (tmBottomRight, tmTopLeft, tmBoth);
+  TTickStyle = (tsNone, tsAuto, tsManual);
+
+  TTrackBar = class(TWinControl)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    procedure Changed; dynamic;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure SetTick(Value: Integer);
+  published
+    property Align;
+    property Anchors;
+    property BorderWidth;
+    property Ctl3D;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Constraints;
+    property LineSize: Integer default 1;
+    property Max: Integer default 10;
+    property Min: Integer default 0;
+    property Orientation: TTrackBarOrientation;
+    property ParentCtl3D;
+    property ParentShowHint;
+    property PageSize: Integer default 2;
+    property PopupMenu;
+    property Frequency: Integer;
+    property Position: Integer;
+    property SliderVisible: Boolean default True;
+    property SelEnd: Integer;
+    property SelStart: Integer;
+    property ShowHint;
+    property TabOrder;
+    property TabStop default True;
+    property ThumbLength: Integer default 20;
+    property TickMarks: TTickMark;
+    property TickStyle: TTickStyle;
+    property Visible;
+    property OnContextPopup;
+    property OnChange: TNotifyEvent;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TProgressBar }
+
+  TProgressRange = Integer; // for backward compatibility
+
+  TProgressBarOrientation = (pbHorizontal, pbVertical);
+
+  TProgressBar = class(TWinControl)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure StepIt;
+    procedure StepBy(Delta: Integer);
+  published
+    property Align;
+    property Anchors;
+    property BorderWidth;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Hint;
+    property Constraints;
+    property Min: Integer;
+    property Max: Integer;
+    property Orientation: TProgressBarOrientation default pbHorizontal;
+    property ParentShowHint;
+    property PopupMenu;
+    property Position: Integer default 0;
+    property Smooth: Boolean default False;
+    property Step: Integer default 10;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnContextPopup;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TTextAttributes }
+
+  TCustomRichEdit = class;
+
+  TAttributeType = (atSelected, atDefaultText);
+  TConsistentAttribute = (caBold, caColor, caFace, caItalic,
+    caSize, caStrikeOut, caUnderline, caProtected);
+  TConsistentAttributes = set of TConsistentAttribute;
+
+  TTextAttributes = class(TPersistent)
+  protected
+    procedure InitFormat(var Format: TCharFormat);
+    procedure AssignTo(Dest: TPersistent); override;
+  public
+    constructor Create(AOwner: TCustomRichEdit; AttributeType: TAttributeType);
+    procedure Assign(Source: TPersistent); override;
+    property Charset: TFontCharset;
+    property Color: TColor;
+    property ConsistentAttributes: TConsistentAttributes;
+    property Name: TFontName;
+    property Pitch: TFontPitch;
+    property Protected: Boolean;
+    property Size: Integer;
+    property Style: TFontStyles;
+    property Height: Integer;
+  end;
+
+{ TParaAttributes }
+
+  TNumberingStyle = (nsNone, nsBullet);
+
+  TParaAttributes = class(TPersistent)
+  public
+    constructor Create(AOwner: TCustomRichEdit);
+    procedure Assign(Source: TPersistent); override;
+    property Alignment: TAlignment;
+    property FirstIndent: Longint;
+    property LeftIndent: Longint;
+    property Numbering: TNumberingStyle;
+    property RightIndent: Longint;
+    property Tab[Index: Byte]: Longint;
+    property TabCount: Integer;
+  end;
+
+{ TCustomRichEdit }
+
+  TRichEditResizeEvent = procedure(Sender: TObject; Rect: TRect) of object;
+  TRichEditProtectChange = procedure(Sender: TObject;
+    StartPos, EndPos: Integer; var AllowChange: Boolean) of object;
+  TRichEditSaveClipboard = procedure(Sender: TObject;
+    NumObjects, NumChars: Integer; var SaveClipboard: Boolean) of object;
+  TSearchType = (stWholeWord, stMatchCase);
+  TSearchTypes = set of TSearchType;
+
+  TConversion = class(TObject)
+  public
+    function ConvertReadStream(Stream: TStream; Buffer: PChar; BufSize: Integer): Integer; virtual;
+    function ConvertWriteStream(Stream: TStream; Buffer: PChar; BufSize: Integer): Integer; virtual;
+  end;
+
+  TConversionClass = class of TConversion;
+
+  PConversionFormat = ^TConversionFormat;
+  TConversionFormat = record
+    ConversionClass: TConversionClass;
+    Extension: string;
+    Next: PConversionFormat;
+  end;
+
+  PRichEditStreamInfo = ^TRichEditStreamInfo;
+  TRichEditStreamInfo = record
+    Converter: TConversion;
+    Stream: TStream;
+  end;
+
+  TCustomRichEdit = class(TCustomMemo)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    procedure RequestSize(const Rect: TRect); virtual;
+    procedure SelectionChange; dynamic;
+    procedure DoSetMaxLength(Value: Integer); override;
+    function GetCaretPos: TPoint; override;
+    procedure SetCaretPos(const Value: TPoint); override;    
+    function GetSelLength: Integer; override;
+    function GetSelStart: Integer; override;
+    function GetSelText: string; override;
+    procedure SetSelLength(Value: Integer); override;
+    procedure SetSelStart(Value: Integer); override;
+    property HideSelection: Boolean default True;
+    property HideScrollBars: Boolean default True;
+    property Lines: TStrings;
+    property OnSaveClipboard: TRichEditSaveClipboard;
+    property OnSelectionChange: TNotifyEvent;
+    property OnProtectChange: TRichEditProtectChange;
+    property OnResizeRequest: TRichEditResizeEvent;
+    property PlainText: Boolean default False;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Clear; override;
+    function FindText(const SearchStr: string;
+      StartPos, Length: Integer; Options: TSearchTypes): Integer;
+    function GetSelTextBuf(Buffer: PChar; BufSize: Integer): Integer; override;
+    procedure Print(const Caption: string); virtual;
+    class procedure RegisterConversionFormat(const AExtension: string;
+      AConversionClass: TConversionClass);
+    property DefaultConverter: TConversionClass;
+    property DefAttributes: TTextAttributes;
+    property SelAttributes: TTextAttributes;
+    property PageRect: TRect;
+    property Paragraph: TParaAttributes;
+  end;
+
+  TRichEdit = class(TCustomRichEdit)
+  published
+    property Align;
+    property Alignment;
+    property Anchors;
+    property BevelEdges;
+    property BevelInner;
+    property BevelOuter;
+    property BevelKind default bkNone;
+    property BevelWidth;
+    property BiDiMode;
+    property BorderStyle;
+    property BorderWidth;
+    property Color;
+    property Ctl3D;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property HideSelection;
+    property HideScrollBars;
+    property ImeMode;
+    property ImeName;
+    property Constraints;
+    property Lines;
+    property MaxLength;
+    property ParentBiDiMode;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PlainText;
+    property PopupMenu;
+    property ReadOnly;
+    property ScrollBars;
+    property ShowHint;
+    property TabOrder;
+    property TabStop default True;
+    property Visible;
+    property WantTabs;
+    property WantReturns;
+    property WordWrap;
+    property OnChange;
+    property OnContextPopup;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnMouseWheel;
+    property OnMouseWheelDown;
+    property OnMouseWheelUp;
+    property OnProtectChange;
+    property OnResizeRequest;
+    property OnSaveClipboard;
+    property OnSelectionChange;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TUpDown }
+
+  TUDAlignButton = (udLeft, udRight);
+  TUDOrientation = (udHorizontal, udVertical);
+  TUDBtnType = (btNext, btPrev);
+  TUpDownDirection = (updNone, updUp, updDown);
+  TUDClickEvent = procedure (Sender: TObject; Button: TUDBtnType) of object;
+  TUDChangingEvent = procedure (Sender: TObject; var AllowChange: Boolean) of object;
+  TUDChangingEventEx = procedure (Sender: TObject; var AllowChange: Boolean; NewValue: SmallInt; Direction: TUpDownDirection) of object;
+
+  TCustomUpDown = class(TWinControl)
+  protected
+    function DoCanChange(NewVal: SmallInt; Delta: SmallInt): Boolean;
+    function CanChange: Boolean; dynamic;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Click(Button: TUDBtnType); reintroduce; dynamic;
+    property AlignButton: TUDAlignButton default udRight;
+    property ArrowKeys: Boolean default True;
+    property Associate: TWinControl;
+    property Min: SmallInt;
+    property Max: SmallInt default 100;
+    property Increment: Integer default 1;
+    property Orientation: TUDOrientation default udVertical;
+    property Position: SmallInt;
+    property Thousands: Boolean default True;
+    property Wrap: Boolean;
+    property OnChanging: TUDChangingEvent;
+    property OnChangingEx: TUDChangingEventEx;    
+    property OnClick: TUDClickEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+  end;
+
+  TUpDown = class(TCustomUpDown)
+  published
+    property AlignButton;
+    property Anchors;
+    property Associate;
+    property ArrowKeys;
+    property Enabled;
+    property Hint;
+    property Min;
+    property Max;
+    property Increment;
+    property Constraints;
+    property Orientation;
+    property ParentShowHint;
+    property PopupMenu;
+    property Position;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Thousands;
+    property Visible;
+    property Wrap;
+    property OnChanging;
+    property OnChangingEx;
+    property OnContextPopup;
+    property OnClick;
+    property OnEnter;
+    property OnExit;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+  end;
+
+{ THotKey }
+
+  THKModifier = (hkShift, hkCtrl, hkAlt, hkExt);
+  THKModifiers = set of THKModifier;
+  THKInvalidKey = (hcNone, hcShift, hcCtrl, hcAlt, hcShiftCtrl,
+    hcShiftAlt, hcCtrlAlt, hcShiftCtrlAlt);
+  THKInvalidKeys = set of THKInvalidKey;
+
+  TCustomHotKey = class(TWinControl)
+  protected
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure CNCommand(var Message: TWMCommand); message CN_COMMAND;
+    procedure SetAutoSize(Value: Boolean); override;    
+    property AutoSize: Boolean default True;
+    property InvalidKeys: THKInvalidKeys;
+    property Modifiers: THKModifiers;
+    property HotKey: TShortCut;
+    property TabStop default True;
+    property OnChange: TNotifyEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+  end;
+
+  THotKey = class(TCustomHotKey)
+  published
+    property Anchors;
+    property AutoSize;
+    property BiDiMode;
+    property Constraints;
+    property Enabled;
+    property Hint;
+    property HotKey;
+    property InvalidKeys;
+    property Modifiers;
+    property ParentBiDiMode;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnChange;
+    property OnContextPopup;
+    property OnEnter;
+    property OnExit;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+  end;
+
+const
+  ColumnHeaderWidth = LVSCW_AUTOSIZE_USEHEADER;
+  ColumnTextWidth = LVSCW_AUTOSIZE;
+
+type
+  TListColumns = class;
+  TListItems = class;
+  TCustomListView = class;
+  TWidth = ColumnHeaderWidth..MaxInt;
+
+  TListColumn = class(TCollectionItem)
+  protected
+    procedure DefineProperties(Filer: TFiler); override;
+    function GetDisplayName: string; override;
+    procedure SetIndex(Value: Integer); override;
+  public
+    constructor Create(Collection: TCollection); override;
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+    property WidthType: TWidth;
+  published
+    property Alignment: TAlignment default taLeftJustify;
+    property AutoSize: Boolean default False;
+    property Caption: string;
+    property ImageIndex: TImageIndex default -1;
+    property MaxWidth: TWidth default 0;
+    property MinWidth: TWidth default 0;
+    property Tag: Integer default 0;
+    property Width: TWidth default 50;
+  end;
+
+  TListColumns = class(TCollection)
+  protected
+    function GetOwner: TPersistent; override;
+    procedure Update(Item: TCollectionItem); override;
+  public
+    constructor Create(AOwner: TCustomListView);
+    function Add: TListColumn;
+    function Owner: TCustomListView;
+    property Items[Index: Integer]: TListColumn; default;
+  end;
+
+  TDisplayCode = (drBounds, drIcon, drLabel, drSelectBounds);
+
+  { TListItem }
+
+  TListItemClass = class of TListItem;
+  TListItem = class(TPersistent)
+  public
+    constructor Create(AOwner: TListItems);
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+    procedure CancelEdit;
+    procedure Delete;
+    function DisplayRect(Code: TDisplayCode): TRect;
+    function EditCaption: Boolean;
+    function GetPosition: TPoint;
+    procedure MakeVisible(PartialOK: Boolean);
+    procedure Update;
+    procedure SetPosition(const Value: TPoint);
+    function WorkArea: Integer;
+    property Caption: string;
+    property Checked: Boolean;
+    property Cut: Boolean index 0;
+    property Data: Pointer;
+    property Deleting: Boolean;
+    property DropTarget: Boolean index 1;
+    property Focused: Boolean index 2;
+    property Handle: HWND;
+    property ImageIndex: TImageIndex index 0;
+    property Indent: Integer default 0;
+    property Index: Integer;
+    property Left: Integer;
+    property ListView: TCustomListView;
+    property Owner: TListItems;
+    property OverlayIndex: TImageIndex index 1;
+    property Position: TPoint;
+    property Selected: Boolean index 3;
+    property StateIndex: TImageIndex index 2;
+    property SubItems: TStrings;
+    property SubItemImages[Index: Integer]: Integer;
+    property Top: Integer;
+  end;
+
+{ TListItems }
+
+  TListItems = class(TPersistent)
+  protected
+    procedure DefineProperties(Filer: TFiler); override;
+    function CreateItem(Index: Integer; ListItem: TListItem): TLVItem;
+    function GetCount: Integer;
+    function GetHandle: HWND;
+    function GetItem(Index: Integer): TListItem;
+    procedure SetCount(Value: Integer);
+    procedure SetItem(Index: Integer; Value: TListItem);
+    procedure SetUpdateState(Updating: Boolean);
+  public
+    constructor Create(AOwner: TCustomListView);
+    destructor Destroy; override;
+    function Add: TListItem;
+    function AddItem(Item: TListItem; Index: Integer = -1): TListItem;
+    procedure Assign(Source: TPersistent); override;
+    procedure BeginUpdate;
+    procedure Clear;
+    procedure Delete(Index: Integer);
+    procedure EndUpdate;
+    function IndexOf(Value: TListItem): Integer;
+    function Insert(Index: Integer): TListItem;
+    property Count: Integer;
+    property Handle: HWND;
+    property Item[Index: Integer]: TListItem; default;
+    property Owner: TCustomListView;
+  end;
+
+{ TWorkArea }
+
+  TWorkArea = class(TCollectionItem)
+  public
+    constructor Create(Collection: TCollection); override;
+    procedure SetDisplayName(const Value: string); override;
+    function  GetDisplayName: string; override;
+    property Rect: TRect;
+    property Color: TColor;
+  end;
+
+{ TWorkAreas }
+
+  TWorkAreas = class(TOwnedCollection)
+  protected
+    procedure Changed;
+    procedure Update(Item: TCollectionItem); override;
+  public
+    function  Add: TWorkArea;
+    procedure Delete(Index: Integer);
+    function  Insert(Index: Integer): TWorkArea;
+    property  Items[Index: Integer]: TWorkArea; default;
+  end;
+
+{ TIconOptions }
+
+  TIconArrangement = (iaTop, iaLeft);
+
+  TIconOptions = class(TPersistent)
+  public
+    constructor Create(AOwner: TCustomListView);
+  published
+    property Arrangement: TIconArrangement default iaTop;
+    property AutoArrange: Boolean default False;
+    property WrapText: Boolean default True;
+  end;
+
+  TOwnerDrawState = Windows.TOwnerDrawState;
+
+  (*$NODEFINE TOwnerDrawState*)
+
+  TListArrangement = (arAlignBottom, arAlignLeft, arAlignRight,
+    arAlignTop, arDefault, arSnapToGrid);
+  TViewStyle = (vsIcon, vsSmallIcon, vsList, vsReport);
+  TItemState = (isNone, isCut, isDropHilited, isFocused, isSelected, isActivating);
+  TItemStates = set of TItemState;
+  TItemChange = (ctText, ctImage, ctState);
+  TItemFind = (ifData, ifPartialString, ifExactString, ifNearest);
+  TSearchDirection = (sdLeft, sdRight, sdAbove, sdBelow, sdAll);
+  TListHotTrackStyle = (htHandPoint, htUnderlineCold, htUnderlineHot);
+  TListHotTrackStyles = set of TListHotTrackStyle;
+  TItemRequests = (irText, irImage, irParam, irState, irIndent);
+  TItemRequest = set of TItemRequests;
+
+  TLVDeletedEvent = procedure(Sender: TObject; Item: TListItem) of object;
+  TLVEditingEvent = procedure(Sender: TObject; Item: TListItem;
+    var AllowEdit: Boolean) of object;
+  TLVEditedEvent = procedure(Sender: TObject; Item: TListItem; var S: string) of object;
+  TLVChangeEvent = procedure(Sender: TObject; Item: TListItem;
+    Change: TItemChange) of object;
+  TLVChangingEvent = procedure(Sender: TObject; Item: TListItem;
+    Change: TItemChange; var AllowChange: Boolean) of object;
+  TLVColumnClickEvent = procedure(Sender: TObject; Column: TListColumn) of object;
+  TLVColumnRClickEvent = procedure(Sender: TObject; Column: TListColumn;
+    Point: TPoint) of object;
+  TLVCompareEvent = procedure(Sender: TObject; Item1, Item2: TListItem;
+    Data: Integer; var Compare: Integer) of object;
+  TLVNotifyEvent = procedure(Sender: TObject; Item: TListItem) of object;
+  TLVSelectItemEvent = procedure(Sender: TObject; Item: TListItem;
+    Selected: Boolean) of object;
+  TLVDrawItemEvent = procedure(Sender: TCustomListView; Item: TListItem;
+    Rect: TRect; State: TOwnerDrawState) of object;
+  TLVCustomDrawEvent = procedure(Sender: TCustomListView; const ARect: TRect;
+    var DefaultDraw: Boolean) of object;
+  TLVCustomDrawItemEvent = procedure(Sender: TCustomListView; Item: TListItem;
+    State: TCustomDrawState; var DefaultDraw: Boolean) of object;
+  TLVCustomDrawSubItemEvent = procedure(Sender: TCustomListView; Item: TListItem;
+    SubItem: Integer; State: TCustomDrawState; var DefaultDraw: Boolean) of object;
+  TLVAdvancedCustomDrawEvent = procedure(Sender: TCustomListView; const ARect: TRect;
+    Stage: TCustomDrawStage; var DefaultDraw: Boolean) of object;
+  TLVAdvancedCustomDrawItemEvent = procedure(Sender: TCustomListView; Item: TListItem;
+    State: TCustomDrawState; Stage: TCustomDrawStage; var DefaultDraw: Boolean) of object;
+  TLVAdvancedCustomDrawSubItemEvent = procedure(Sender: TCustomListView; Item: TListItem;
+    SubItem: Integer; State: TCustomDrawState; Stage: TCustomDrawStage;
+    var DefaultDraw: Boolean) of object;
+  TLVOwnerDataEvent = procedure(Sender: TObject; Item: TListItem) of object;
+  TLVOwnerDataFindEvent = procedure(Sender: TObject; Find: TItemFind;
+    const FindString: string; const FindPosition: TPoint; FindData: Pointer;
+    StartIndex: Integer; Direction: TSearchDirection; Wrap: Boolean;
+    var Index: Integer) of object;
+  TLVOwnerDataHintEvent = procedure(Sender: TObject; StartIndex, EndIndex: Integer) of object;
+  TLVOwnerDataStateChangeEvent = procedure(Sender: TObject; StartIndex,
+    EndIndex: Integer; OldState, NewState: TItemStates) of object;
+  TLVSubItemImageEvent = procedure(Sender: TObject; Item: TListItem; SubItem: Integer;
+    var ImageIndex: Integer) of object;
+  TLVInfoTipEvent = procedure(Sender: TObject; Item: TListItem; var InfoTip: string) of object;
+  TLVCreateItemClassEvent = procedure(Sender: TCustomListView; var ItemClass: TListItemClass) of object;
+
+{ TCustomListView }
+
+  TCustomListView = class(TCustomMultiSelectListControl)
+  protected
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); override;
+    function CanChange(Item: TListItem; Change: Integer): Boolean; dynamic;
+    function CanEdit(Item: TListItem): Boolean; dynamic;
+    procedure Change(Item: TListItem; Change: Integer); dynamic;
+    procedure ChangeScale(M, D: Integer); override;
+    procedure ColClick(Column: TListColumn); dynamic;
+    procedure ColRightClick(Column: TListColumn; Point: TPoint); dynamic;
+    function ColumnsShowing: Boolean;
+    function CreateListItem: TListItem; virtual;
+    function CreateListItems: TListItems; virtual;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    function CustomDraw(const ARect: TRect; Stage: TCustomDrawStage): Boolean; virtual;
+    function CustomDrawItem(Item: TListItem; State: TCustomDrawState;
+      Stage: TCustomDrawStage): Boolean; virtual;
+    function CustomDrawSubItem(Item: TListItem; SubItem: Integer;
+      State: TCustomDrawState; Stage: TCustomDrawStage): Boolean; virtual;
+    procedure Delete(Item: TListItem); dynamic;
+    procedure DestroyWnd; override;
+    procedure DoEndDrag(Target: TObject; X, Y: Integer); override;
+    procedure DoStartDrag(var DragObject: TDragObject); override;
+    procedure DoInfoTip(Item: TListItem; var InfoTip: string); virtual;
+    procedure DrawItem(Item: TListItem; Rect: TRect; State: TOwnerDrawState); virtual;
+    procedure Edit(const Item: TLVItem); dynamic;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    function OwnerDataFetch(Item: TListItem; Request: TItemRequest): Boolean; virtual;
+    function OwnerDataFind(Find: TItemFind; const FindString: string;
+      const FindPosition: TPoint; FindData: Pointer; StartIndex: Integer;
+      Direction: TSearchDirection; Wrap: Boolean): Integer; virtual;
+    function OwnerDataHint(StartIndex, EndIndex: Integer): Boolean; virtual;
+    function OwnerDataStateChange(StartIndex, EndIndex: Integer; OldState,
+      NewState: TItemStates): Boolean; virtual;
+    function GetActionLinkClass: TControlActionLinkClass; override;
+    function GetCount: Integer; override;
+    function GetDragImages: TDragImageList; override;
+    function GetItemIndex(Value: TListItem): Integer; reintroduce; overload;
+    function GetItemIndex: Integer; reintroduce; overload; override;
+    function GetSelCount: Integer; override;
+    procedure InsertItem(Item: TListItem); dynamic;
+    function IsCustomDrawn(Target: TCustomDrawTarget; Stage: TCustomDrawStage): Boolean; virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SetItemIndex(const Value: Integer); override;
+    procedure SetMultiSelect(Value: Boolean); override;
+    procedure SetViewStyle(Value: TViewStyle); virtual;
+    procedure UpdateColumn(AnIndex: Integer);
+    procedure UpdateColumns;
+    procedure WndProc(var Message: TMessage); override;
+    property BorderStyle: TBorderStyle default bsSingle;
+    property Columns: TListColumns;
+    property ColumnClick: Boolean default True;
+    property ReadOnly: Boolean;
+    property HideSelection: Boolean default True;
+    property IconOptions: TIconOptions;
+    property Items: TListItems;
+    property AllocBy: Integer default 0;
+    property HoverTime: Integer default -1;
+    property LargeImages: TCustomImageList;
+    property MultiSelect: Boolean default False;
+    property OwnerData: Boolean default False;
+    property OwnerDraw: Boolean default False;
+    property OnAdvancedCustomDraw: TLVAdvancedCustomDrawEvent;
+    property OnAdvancedCustomDrawItem: TLVAdvancedCustomDrawItemEvent;
+    property OnAdvancedCustomDrawSubItem: TLVAdvancedCustomDrawSubItemEvent;
+    property OnChange: TLVChangeEvent;
+    property OnChanging: TLVChangingEvent;
+    property OnColumnClick: TLVColumnClickEvent;
+    property OnColumnDragged: TNotifyEvent;
+    property OnColumnRightClick: TLVColumnRClickEvent;
+    property OnCompare: TLVCompareEvent;
+    property OnCustomDraw: TLVCustomDrawEvent;
+    property OnCustomDrawItem: TLVCustomDrawItemEvent;
+    property OnCustomDrawSubItem: TLVCustomDrawSubItemEvent;
+    property OnData: TLVOwnerDataEvent;
+    property OnDataFind: TLVOwnerDataFindEvent;
+    property OnDataHint: TLVOwnerDataHintEvent;
+    property OnDataStateChange: TLVOwnerDataStateChangeEvent;
+    property OnDeletion: TLVDeletedEvent;
+    property OnDrawItem: TLVDrawItemEvent;
+    property OnEdited: TLVEditedEvent;
+    property OnEditing: TLVEditingEvent;
+    property OnInfoTip: TLVInfoTipEvent;
+    property OnInsert: TLVDeletedEvent;
+    property OnGetImageIndex: TLVNotifyEvent;
+    property OnGetSubItemImage: TLVSubItemImageEvent;
+    property OnSelectItem: TLVSelectItemEvent;
+    property ShowColumnHeaders: Boolean default True;
+    property ShowWorkAreas: Boolean default False;
+    property SmallImages: TCustomImageList;
+    property SortType: TSortType default stNone;
+    property StateImages: TCustomImageList;
+    property ViewStyle: TViewStyle default vsIcon;
+    property OnCreateItemClass: TLVCreateItemClassEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure AddItem(Item: String; AObject: TObject); override;
+    function AlphaSort: Boolean;
+    procedure Arrange(Code: TListArrangement);
+    procedure Clear; override;
+    procedure ClearSelection; override;
+    procedure CopySelection(Destination: TCustomListControl); override;
+    procedure DeleteSelected; override;
+    function FindCaption(StartIndex: Integer; Value: string;
+      Partial, Inclusive, Wrap: Boolean): TListItem;
+    function FindData(StartIndex: Integer; Value: Pointer;
+      Inclusive, Wrap: Boolean): TListItem;
+    function GetHitTestInfoAt(X, Y: Integer): THitTests;
+    function GetItemAt(X, Y: Integer): TListItem;
+    function GetNearestItem(Point: TPoint;
+      Direction: TSearchDirection): TListItem;
+    function GetNextItem(StartItem: TListItem;
+      Direction: TSearchDirection; States: TItemStates): TListItem;
+    function GetSearchString: string;
+    function IsEditing: Boolean;
+    procedure SelectAll; override;
+    procedure Scroll(DX, DY: Integer);
+    property Canvas: TCanvas;
+    property Checkboxes: Boolean default False;
+    property Column[Index: Integer]: TListColumn;
+    property DropTarget: TListItem;
+    property FlatScrollBars: Boolean default False;
+    property FullDrag: Boolean default False;
+    property GridLines: Boolean default False;
+    property HotTrack: Boolean default False;
+    property HotTrackStyles: TListHotTrackStyles default [];
+    property ItemFocused: TListItem;
+    property RowSelect: Boolean default False;
+    property SelCount: Integer;
+    property Selected: TListItem;
+    function CustomSort(SortProc: TLVCompare; lParam: Longint): Boolean;
+    function StringWidth(S: string): Integer;
+    procedure UpdateItems(FirstIndex, LastIndex: Integer);
+    property TopItem: TListItem;
+    property ViewOrigin: TPoint;
+    property VisibleRowCount: Integer;
+    property BoundingRect: TRect;
+    property WorkAreas: TWorkAreas;
+  end;
+
+{ TListView }
+
+  TListView = class(TCustomListView)
+  published
+    property Action;
+    property Align;
+    property AllocBy;
+    property Anchors;
+    property BevelEdges;
+    property BevelInner;
+    property BevelOuter;
+    property BevelKind default bkNone;
+    property BevelWidth;
+    property BiDiMode;
+    property BorderStyle;
+    property BorderWidth;
+    property Checkboxes;
+    property Color;
+    property Columns;
+    property ColumnClick;
+    property Constraints;
+    property Ctl3D;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property FlatScrollBars;
+    property FullDrag;
+    property GridLines;
+    property HideSelection;
+    property HotTrack;
+    property HotTrackStyles;
+    property HoverTime;
+    property IconOptions;
+    property Items;
+    property LargeImages;
+    property MultiSelect;
+    property OwnerData;
+    property OwnerDraw;
+    property ReadOnly default False;
+    property RowSelect;
+    property ParentBiDiMode;
+    property ParentColor default False;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowColumnHeaders;
+    property ShowWorkAreas;
+    property ShowHint;
+    property SmallImages;
+    property SortType;
+    property StateImages;
+    property TabOrder;
+    property TabStop default True;
+    property ViewStyle;
+    property Visible;
+    property OnAdvancedCustomDraw;
+    property OnAdvancedCustomDrawItem;
+    property OnAdvancedCustomDrawSubItem;
+    property OnChange;
+    property OnChanging;
+    property OnClick;
+    property OnColumnClick;
+    property OnColumnDragged;
+    property OnColumnRightClick;
+    property OnCompare;
+    property OnContextPopup;
+    property OnCustomDraw;
+    property OnCustomDrawItem;
+    property OnCustomDrawSubItem;
+    property OnData;
+    property OnDataFind;
+    property OnDataHint;
+    property OnDataStateChange;
+    property OnDblClick;
+    property OnDeletion;
+    property OnDrawItem;
+    property OnEdited;
+    property OnEditing;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGetImageIndex;
+    property OnGetSubItemImage;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnInfoTip;
+    property OnInsert;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnSelectItem;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TListViewActionLink }
+
+  TListViewActionLink = class(TListActionLink)
+  protected
+    procedure AddItem(AnItem: TListControlItem); override;
+    procedure AddItem(ACaption: String; AImageIndex: Integer;
+      DataPtr: Pointer); override;
+    procedure SetImages(Value: TCustomImageList); override;
+  end;
+
+{ TAnimate }
+
+  TCommonAVI = (aviNone, aviFindFolder, aviFindFile, aviFindComputer, aviCopyFiles,
+    aviCopyFile, aviRecycleFile, aviEmptyRecycle, aviDeleteFile);
+
+  TAnimate = class(TWinControl)
+  protected
+    function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    procedure DoOpen; virtual;
+    procedure DoClose; virtual;
+    procedure DoStart; virtual;
+    procedure DoStop; virtual;
+    procedure Loaded; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    property FrameCount: Integer;
+    property FrameHeight: Integer;
+    property FrameWidth: Integer;
+    property Open: Boolean;
+    procedure Play(FromFrame, ToFrame: Word; Count: Integer);
+    procedure Reset;
+    procedure Seek(Frame: Smallint);
+    procedure Stop;
+    property ResHandle: THandle;
+    property ResId: Integer;
+    property ResName: string;
+  published
+    property Align;
+    property Active: Boolean;
+    property Anchors;
+    property AutoSize default True;
+    property BorderWidth;
+    property Center: Boolean default True;
+    property Color;
+    property CommonAVI: TCommonAVI default aviNone;
+    property Constraints;
+    property FileName: string;
+    property ParentColor;
+    property ParentShowHint;
+    property Repetitions: Integer default 0;
+    property ShowHint;
+    property StartFrame: Smallint default 1;
+    property StopFrame: Smallint default 0;
+    property Timers: Boolean default False;
+    property Transparent: Boolean default True;
+    property Visible;
+    property OnOpen: TNotifyEvent;
+    property OnClose: TNotifyEvent;
+    property OnStart: TNotifyEvent;
+    property OnStop: TNotifyEvent;
+  end;
+
+{ TToolBar }
+
+const
+  CN_DROPDOWNCLOSED = WM_USER + $1000;
+
+type
+  TToolButtonStyle = (tbsButton, tbsCheck, tbsDropDown, tbsSeparator, tbsDivider);
+
+  TToolButtonState = (tbsChecked, tbsPressed, tbsEnabled, tbsHidden,
+    tbsIndeterminate, tbsWrap, tbsEllipses, tbsMarked);
+
+  TToolBar = class;
+  TToolButton = class;
+
+{ TToolButtonActionLink }
+
+  TToolButtonActionLink = class(TControlActionLink)
+  protected
+    FClient: TToolButton;
+    procedure AssignClient(AClient: TObject); override;
+    function IsCheckedLinked: Boolean; override;
+    function IsImageIndexLinked: Boolean; override;
+    procedure SetChecked(Value: Boolean); override;
+    procedure SetImageIndex(Value: Integer); override;
+  end;
+
+  TToolButtonActionLinkClass = class of TToolButtonActionLink;
+
+  TToolButton = class(TGraphicControl)
+  protected
+    FToolBar: TToolBar;
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); override;
+    procedure AssignTo(Dest: TPersistent); override;
+    procedure BeginUpdate; virtual;
+    procedure EndUpdate; virtual;
+    function GetActionLinkClass: TControlActionLinkClass; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState;
+      X, Y: Integer); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Paint; override;
+    procedure RefreshControl; virtual;
+    procedure SetAutoSize(Value: Boolean); override;   
+    procedure SetToolBar(AToolBar: TToolBar);
+    procedure UpdateControl; virtual;
+    procedure ValidateContainer(AComponent: TComponent); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    function CheckMenuDropdown: Boolean; dynamic;
+    procedure Click; override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+    property Index: Integer;
+  published
+    property Action;
+    property AllowAllUp: Boolean default False;
+    property AutoSize: Boolean default False;
+    property Caption;
+    property Down: Boolean default False;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property DropdownMenu: TPopupMenu;
+    property Enabled;
+    property Grouped: Boolean default False;
+    property Height stored False;
+    property ImageIndex: TImageIndex default -1;
+    property Indeterminate: Boolean default False;
+    property Marked: Boolean default False;
+    property MenuItem: TMenuItem;
+    property ParentShowHint;
+    property PopupMenu;
+    property Wrap: Boolean default False;
+    property ShowHint;
+    property Style: TToolButtonStyle default tbsButton;
+    property Visible;
+    property Width stored IsWidthStored;
+    property OnClick;
+    property OnContextPopup;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+  TTBCustomDrawFlags = set of (tbNoEdges, tbHiliteHotTrack, tbNoOffset,
+    tbNoMark, tbNoEtchedEffect);
+
+  TTBCustomDrawEvent = procedure(Sender: TToolBar; const ARect: TRect;
+    var DefaultDraw: Boolean) of object;
+  TTBCustomDrawBtnEvent = procedure(Sender: TToolBar; Button: TToolButton;
+    State: TCustomDrawState; var DefaultDraw: Boolean) of object;
+  TTBAdvancedCustomDrawEvent = procedure(Sender: TToolBar; const ARect: TRect;
+    Stage: TCustomDrawStage; var DefaultDraw: Boolean) of object;
+  TTBAdvancedCustomDrawBtnEvent = procedure(Sender: TToolBar; Button: TToolButton;
+    State: TCustomDrawState; Stage: TCustomDrawStage;
+    var Flags: TTBCustomDrawFlags; var DefaultDraw: Boolean) of object;
+  TTBCustomizeQueryEvent = procedure(Sender: TToolbar; Index: Integer;
+    var Allow: Boolean) of object;
+  TTBNewButtonEvent = procedure(Sender: TToolbar; Index: Integer;
+    var Button: TToolButton) of object;
+  TTBButtonEvent = procedure(Sender: TToolbar; Button: TToolButton) of object;
+
+  TToolBar = class(TToolWindow)
+  protected
+    procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure CancelMenu; dynamic;
+    procedure ChangeScale(M, D: Integer); override;
+    function CheckMenuDropdown(Button: TToolButton): Boolean; dynamic;
+    procedure ClickButton(Button: TToolButton); dynamic;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    function  CustomDraw(const ARect: TRect; Stage: TCustomDrawStage): Boolean; virtual;
+    function CustomDrawButton(Button: TToolButton; State: TCustomDrawState;
+      Stage: TCustomDrawStage; var Flags: TTBCustomDrawFlags): Boolean; virtual;
+    function DoQueryInsert(Index: Integer): Boolean; virtual;
+    function DoQueryDelete(Index: Integer): Boolean; virtual;
+    function FindButtonFromAccel(Accel: Word): TToolButton;
+    procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
+    procedure InitMenu(Button: TToolButton); dynamic;
+    function IsCustomDrawn(Target: TCustomDrawTarget; Stage: TCustomDrawStage): Boolean; virtual;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent;
+      Operation: TOperation); override;
+    procedure RepositionButton(Index: Integer);
+    procedure RepositionButtons(Index: Integer);
+    procedure WndProc(var Message: TMessage); override;
+    function WrapButtons(var NewWidth, NewHeight: Integer): Boolean;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure FlipChildren(AllLevels: Boolean); override;
+    function TrackMenu(Button: TToolButton): Boolean; dynamic;
+    property ButtonCount: Integer;
+    property Buttons[Index: Integer]: TToolButton;
+    property Canvas: TCanvas;
+    property CustomizeKeyName: string;
+    property CustomizeValueName: string;
+    property RowCount: Integer;
+  published
+    property Align default alTop;
+    property Anchors;
+    property AutoSize;
+    property BorderWidth;
+    property ButtonHeight: Integer default 22;
+    property ButtonWidth: Integer default 23;
+    property Caption;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property Customizable: Boolean default False;
+    property DisabledImages: TCustomImageList;
+    property DockSite;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property EdgeBorders default [ebTop];
+    property EdgeInner;
+    property EdgeOuter;
+    property Enabled;
+    property Flat: Boolean default False;
+    property Font;
+    property Height default 32;
+    property HotImages: TCustomImageList;
+    property Images: TCustomImageList;
+    property Indent: Integer default 0;
+    property List: Boolean default False;
+    property Menu: TMainMenu;
+    property ParentColor;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowCaptions: Boolean default False;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Transparent: Boolean default False;
+    property Visible;
+    property Wrapable: Boolean default True;
+    property OnAdvancedCustomDraw: TTBAdvancedCustomDrawEvent;
+    property OnAdvancedCustomDrawButton: TTBAdvancedCustomDrawBtnEvent;
+    property OnClick;
+    property OnContextPopup;
+    property OnCustomDraw: TTBCustomDrawEvent;
+    property OnCustomDrawButton: TTBCustomDrawBtnEvent;
+    property OnCustomizeAdded: TTBButtonEvent;
+    property OnCustomizeCanInsert: TTBCustomizeQueryEvent;
+    property OnCustomizeCanDelete: TTBCustomizeQueryEvent;
+    property OnCustomized: TNotifyEvent;
+    property OnCustomizeDelete: TTBButtonEvent;
+    property OnCustomizing: TNotifyEvent;
+    property OnCustomizeNewButton: TTBNewButtonEvent;
+    property OnCustomizeReset: TNotifyEvent;
+    property OnDblClick;
+    property OnDockDrop;
+    property OnDockOver;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGetSiteInfo;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnUnDock;
+  end;
+
+  TToolBarDockObject = class(TDragDockObject)
+  protected
+    procedure AdjustDockRect(ARect: TRect); override;
+    procedure DrawDragDockImage; override;
+    procedure EraseDragDockImage; override;
+    function GetDragCursor(Accepted: Boolean; X, Y: Integer): TCursor; override;
+    function ToolDockImage(Erase: Boolean): Boolean; virtual;
+  end;
+
+{ TCoolBar }
+
+const
+  CN_BANDCHANGE = WM_USER + $1000;
+
+type
+  TCoolBar = class;
+
+  TCoolBand = class(TCollectionItem)
+  protected
+    function GetDisplayName: string; override;
+    procedure ParentColorChanged; dynamic;
+    procedure ParentBitmapChanged; dynamic;
+  public
+    constructor Create(Collection: TCollection); override;
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+    property Height: Integer;
+  published
+    property Bitmap: TBitmap;
+    property BorderStyle: TBorderStyle default bsNone;
+    property Break: Boolean default True;
+    property Color: TColor default clBtnFace;
+    property Control: TWinControl;
+    property FixedBackground: Boolean default True;
+    property FixedSize: Boolean default False;
+    property HorizontalOnly: Boolean default False;
+    property ImageIndex: TImageIndex;
+    property MinHeight: Integer default 25;
+    property MinWidth: Integer default 0;
+    property ParentColor: Boolean default True;
+    property ParentBitmap: Boolean default True;
+    property Text: string;
+    property Visible: Boolean default True;
+    property Width: Integer;
+  end;
+
+  TCoolBands = class(TCollection)
+  protected
+    function GetOwner: TPersistent; override;
+    procedure Update(Item: TCollectionItem); override;
+    function HaveGraphic: Boolean;
+  public
+    constructor Create(CoolBar: TCoolBar);
+    function Add: TCoolBand;
+    function FindBand(AControl: TControl): TCoolBand;
+    property CoolBar: TCoolBar;
+    property Items[Index: Integer]: TCoolBand; default;
+  end;
+
+  TCoolBandMaximize = (bmNone, bmClick, bmDblClick);
+
+  TCoolBar = class(TToolWindow)
+  protected
+    procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure Change; dynamic;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    function GetPalette: HPALETTE; override;
+    function HitTest(const Pos: TPoint): TCoolBand;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure WndProc(var Message: TMessage); override;
+    procedure PaintWindow(DC: HDC); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure FlipChildren(AllLevels: Boolean); override;
+  published
+    property Align read GetAlign write SetAlign default alTop;
+    property Anchors;
+    property AutoSize;
+    property BandBorderStyle: TBorderStyle default bsSingle;
+    property BandMaximize: TCoolBandMaximize default bmClick;
+    property Bands: TCoolBands;
+    property BorderWidth;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DockSite;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property EdgeBorders;
+    property EdgeInner;
+    property EdgeOuter;
+    property Enabled;
+    property FixedSize: Boolean default False;
+    property FixedOrder: Boolean default False;
+    property Font;
+    property Images: TCustomImageList;
+    property ParentColor;
+    property ParentFont;
+    property ParentShowHint;
+    property Bitmap: TBitmap;
+    property PopupMenu;
+    property ShowHint;
+    property ShowText: Boolean default True;
+    property Vertical: Boolean default False;
+    property Visible;
+    property OnChange: TNotifyEvent;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDockDrop;
+    property OnDockOver;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnGetSiteInfo;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnResize;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnUnDock;
+  end;
+
+{ Calendar common control support }
+
+  TCommonCalendar = class;
+
+  ECommonCalendarError = class(Exception);
+
+  TMonthCalColors = class(TPersistent)
+  public
+    constructor Create(AOwner: TCommonCalendar);
+    procedure Assign(Source: TPersistent); override;
+  published
+    property BackColor: TColor index 0 default clWindow;
+    property TextColor: TColor index 1 default clWindowText;
+    property TitleBackColor: TColor index 2 default clActiveCaption;
+    property TitleTextColor: TColor index 3 default clWhite;
+    property MonthBackColor: TColor index 4 default clWhite;
+    property TrailingTextColor: TColor index 5 default clInactiveCaptionText;
+  end;
+
+  TCalDayOfWeek = (dowMonday, dowTuesday, dowWednesday, dowThursday,
+    dowFriday, dowSaturday, dowSunday, dowLocaleDefault);
+
+  TOnGetMonthInfoEvent = procedure(Sender: TObject; Month: LongWord;
+    var MonthBoldInfo: LongWord) of object;
+
+  TCommonCalendar = class(TWinControl)
+  protected
+    procedure CheckEmptyDate; virtual;
+    procedure CheckValidDate(Value: TDate); virtual;
+    procedure CreateWnd; override;
+    function GetCalendarHandle: HWND; virtual; abstract;
+    function GetCalStyles: DWORD; virtual;
+    function MsgSetCalColors(ColorIndex: Integer; ColorValue: TColor): Boolean; virtual; abstract;
+    function MsgSetDateTime(Value: TSystemTime): Boolean; virtual; abstract;
+    function MsgSetRange(Flags: Integer; SysTime: PSystemTime): Boolean; virtual; abstract;
+    property CalColors: TMonthCalColors;
+    property CalendarHandle: HWND;
+    property CalExceptionClass: ExceptClass;
+    property Date: TDate;
+    property DateTime: TDateTime;
+    property EndDate: TDate;
+    property FirstDayOfWeek: TCalDayOfWeek default dowLocaleDefault;
+    property MaxDate: TDate;
+    property MaxSelectRange: Integer default 31;
+    property MinDate: TDate;
+    property MonthDelta: Integer default 1;
+    property MultiSelect: Boolean default False;
+    property ShowToday: Boolean default True;
+    property ShowTodayCircle: Boolean default True;
+    property WeekNumbers: Boolean default False;
+    property OnGetMonthInfo: TOnGetMonthInfoEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure BoldDays(Days: array of LongWord; var MonthBoldInfo: LongWord);
+  end;
+
+{ TMonthCalendar }
+
+  EMonthCalError = class(ECommonCalendarError);
+
+  TMonthCalendar = class(TCommonCalendar)
+  protected
+    function CanAutoSize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure ConstrainedResize(var MinWidth, MinHeight, MaxWidth,
+      MaxHeight: Integer); override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    function GetCalendarHandle: HWND; override;
+    function MsgSetCalColors(ColorIndex: Integer; ColorValue: TColor): Boolean; override;
+    function MsgSetDateTime(Value: TSystemTime): Boolean; override;
+    function MsgSetRange(Flags: Integer; SysTime: PSystemTime): Boolean; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property Align;
+    property Anchors;
+    property AutoSize;
+    property BorderWidth;
+    property BiDiMode;
+    property CalColors;
+    property Constraints;
+    property MultiSelect;  // must be before date stuff
+    property Date;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property EndDate;
+    property FirstDayOfWeek;
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property MaxDate;
+    property MaxSelectRange;
+    property MinDate;
+    property ParentBiDiMode;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property ShowToday;
+    property ShowTodayCircle;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property WeekNumbers;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnGetMonthInfo;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TDateTimePicker }
+
+  EDateTimeError = class(ECommonCalendarError);
+
+  TDateTimeKind = (dtkDate, dtkTime);
+  TDTDateMode = (dmComboBox, dmUpDown);
+  TDTDateFormat = (dfShort, dfLong);
+  TDTCalAlignment = (dtaLeft, dtaRight);
+
+  TDTParseInputEvent = procedure(Sender: TObject; const UserString: string;
+    var DateAndTime: TDateTime; var AllowChange: Boolean) of object;
+
+  TDateTimeColors = TMonthCalColors;  // for backward compatibility
+
+  TDateTimePicker = class(TCommonCalendar)
+  protected
+    procedure CheckEmptyDate; override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure Change; dynamic;
+    function GetCalendarHandle: HWND; override;
+    function MsgSetCalColors(ColorIndex: Integer; ColorValue: TColor): Boolean; override;
+    function MsgSetDateTime(Value: TSystemTime): Boolean; override;
+    function MsgSetRange(Flags: Integer; SysTime: PSystemTime): Boolean; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    property DateTime;
+    property DroppedDown: Boolean;
+  published
+    property Anchors;
+    property BevelEdges;
+    property BevelInner;
+    property BevelOuter;
+    property BevelKind default bkNone;
+    property BevelWidth;
+    property BiDiMode;
+    property CalAlignment: TDTCalAlignment;
+    property CalColors;
+    property Constraints;
+    // The Date, Time, ShowCheckbox, and Checked properties must be in this order:
+    property Date;
+    property Format: String;
+    property Time: TTime;
+    property ShowCheckbox: Boolean default False;
+    property Checked: Boolean default True;
+    property Color stored True default clWindow;
+    property DateFormat: TDTDateFormat;
+    property DateMode: TDTDateMode;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property Kind: TDateTimeKind;
+    property MaxDate;
+    property MinDate;
+    property ParseInput: Boolean;
+    property ParentBiDiMode;
+    property ParentColor default False;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop default True;
+    property Visible;
+    property OnClick;
+    property OnCloseUp: TNotifyEvent;
+    property OnChange: TNotifyEvent;
+    property OnContextPopup;
+    property OnDropDown: TNotifyEvent;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnStartDock;
+    property OnStartDrag;
+    property OnUserInput: TDTParseInputEvent;
+  end;
+
+{ TPageScroller }
+
+  TPageScrollerOrientation = (soHorizontal, soVertical);
+  TPageScrollerButton = (sbFirst, sbLast);
+  TPageScrollerButtonState = (bsNormal, bsInvisible, bsGrayed, bsDepressed, bsHot);
+
+  TPageScrollEvent = procedure (Sender: TObject; Shift: TShiftState; X, Y: Integer;
+    Orientation: TPageScrollerOrientation; var Delta: Integer) of object;
+
+  TPageScroller = class(TWinControl)
+  protected
+    procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Scroll(Shift: TShiftState; X, Y: Integer;
+      Orientation: TPageScrollerOrientation; var Delta: Integer); dynamic;
+  public
+    constructor Create(AOwner: TComponent); override;
+    function GetButtonState(Button: TPageScrollerButton): TPageScrollerButtonState;
+  published
+    property Align;
+    property Anchors;
+    property AutoScroll: Boolean;
+    property BorderWidth;
+    property ButtonSize: Integer default 12;
+    property Color;
+    property Constraints;
+    property Control: TWinControl;
+    property DockSite;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property DragScroll: Boolean default True;
+    property Enabled;
+    property Font;
+    property Margin: Integer default 0;
+    property Orientation: TPageScrollerOrientation default soHorizontal;
+    property ParentColor;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property Position: Integer default 0;
+    property ShowHint;
+    property TabOrder;
+    property TabStop default True;
+    property Visible;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseWheel;
+    property OnResize;
+    property OnScroll: TPageScrollEvent;
+    property OnStartDock;
+    property OnStartDrag;
+  end;
+
+{ TCustomComboBoxEx }
+
+  TComboExItem = class(TListControlItem)
+  protected
+    procedure SetOverlayImageIndex(const Value: TImageIndex); virtual;
+    procedure SetSelectedImageIndex(const Value: TImageIndex); virtual;
+    procedure SetCaption(const Value: String); override;
+    procedure SetData(const Value: Pointer); override;
+    procedure SetDisplayName(const Value: String); override;
+    procedure SetImageIndex(const Value: TImageIndex); override;
+    procedure SetIndex(Value: Integer); override;
+  public
+    procedure Assign(Source: TPersistent); override;
+  published
+    property Indent: Integer default -1;
+    property OverlayImageIndex: TImageIndex default -1;
+    property SelectedImageIndex: TImageIndex default -1;
+  end;
+
+  TComboExItems = class(TListControlItems)
+  protected
+    procedure Notify(Item: TCollectionItem;
+      Action: TCollectionNotification); override;
+    procedure SetItem(const Index: Integer); virtual;
+  public
+    function Add: TComboExItem;
+    function AddItem(const Caption: String; const ImageIndex, SelectedImageIndex,
+      OverlayImageIndex, Indent: Integer; Data: Pointer): TComboExItem;
+    function Insert(Index: Integer): TComboExItem;
+    property ComboItems[const Index: Integer]: TComboExItem;
+  end;
+
+  TComboExItemsClass = class of TComboExItems;
+  TComboExItemClass = class of TComboExItem;
+
+  TCustomComboBoxEx = class;
+
+  TComboBoxExStrings = class(TCustomComboBoxStrings)
+  protected
+    function GetItemsClass: TComboExItemsClass; virtual;
+    function GetItemClass: TComboExItemClass; virtual;
+    procedure Put(Index: Integer; const S: String); override;
+    procedure PutObject(Index: Integer; AObject: TObject); override;
+    procedure SetUpdateState(Updating: Boolean); override;
+  public
+    constructor Create(Owner: TCustomComboBoxEx);
+    destructor Destroy; override;
+    function Add(const S: String): Integer; override;
+    function AddItem(const Caption: String; const ImageIndex, SelectedImageIndex,
+      OverlayImageIndex, Indent: Integer; Data: Pointer): TComboExItem;
+    function AddObject(const S: String; AObject: TObject): Integer; override;
+    procedure Clear; override;
+    procedure Delete(Index: Integer); override;
+    procedure Exchange(Index1: Integer; Index2: Integer); override;
+    function Get(Index: Integer): String; override;
+    function GetCapacity: Integer; override;
+    function GetCount: Integer; override;
+    function GetObject(Index: Integer): TObject; override;
+    function IndexOf(const S: String): Integer; override;
+    function IndexOfName(const Name: String): Integer; override;
+    procedure Insert(Index: Integer; const S: String); override;
+    procedure Move(CurIndex: Integer; NewIndex: Integer); override;
+    property SortType: TListItemsSortType;
+    property ItemsEx: TComboExItems;
+  end;
+
+{ TCustomComboBoxEx }
+
+  TComboBoxExStyle = (csExDropDown, csExSimple, csExDropDownList);
+  TComboBoxExStyleEx = (csExCaseSensitive, csExNoEditImage, csExNoEditImageIndent,
+                        csExNoSizeLimit, csExPathWordBreak);
+  TComboBoxExStyles = set of TComboBoxExStyleEx;
+
+  TCustomComboBoxEx = class(TCustomCombo)
+  protected
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); override;
+    procedure CMColorChanged(var Message: TMessage); message CM_COLORCHANGED;
+    procedure CMParentColorChanged(var Message: TMessage); message CM_PARENTCOLORCHANGED;
+    procedure CNNotify(var Message: TWMNotify); message CN_NOTIFY;
+    procedure ComboExWndProc(var Message: TMessage);
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    function GetActionLinkClass: TControlActionLinkClass; override;
+    function GetItemsClass: TCustomComboBoxStringsClass; override;
+    function GetItemCount: Integer; override;
+    function GetItemHt: Integer; override;
+    procedure Notification(AComponent: TComponent;
+      Operation: TOperation); override;
+    procedure SetDropDownCount(const Value: Integer); override;
+    procedure WMLButtonDown(var Message: TWMLButtonDown); message WM_LBUTTONDOWN;
+    procedure WndProc(var Message: TMessage); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function Focused: Boolean; override;
+    property DropDownCount: Integer;
+    property Images: TCustomImageList;
+    property ItemsEx: TComboExItems;
+    property SelText: string;
+    property Style: TComboBoxExStyle default csExDropDown;
+    property StyleEx: TComboBoxExStyles;
+    property OnBeginEdit: TNotifyEvent;
+    property OnEndEdit: TNotifyEvent;
+  end;
+
+{ TComboBoxEx }
+
+  TComboBoxEx = class(TCustomComboBoxEx)
+  published
+    property ItemsEx;
+    property Style; {Must be published before Items}
+    property StyleEx;
+    property Action;
+    property Anchors;
+    property BiDiMode;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DragCursor;
+    property DragKind;
+    property DragMode;
+    property Enabled;
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property ItemHeight;
+    property MaxLength;
+    property ParentBiDiMode;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Text;
+    property Visible;
+    property OnBeginEdit;
+    property OnChange;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDropDown;
+    property OnEndEdit;
+    property OnEndDock;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnSelect;
+    property OnStartDock;
+    property OnStartDrag;
+//    property Items;
+    property Images;
+    property DropDownCount;
+  end;
+
+{ TComboBoxExActionLink }
+
+  TComboBoxExActionLink = class(TListActionLink)
+  protected
+    procedure AddItem(AnItem: TListControlItem); override;
+    procedure AddItem(ACaption: String; AImageIndex: Integer;
+      DataPtr: Pointer); override;
+  end;
+
+function InitCommonControl(CC: Integer): Boolean;
+procedure CheckCommonControl(CC: Integer);
+
+const
+  ComCtlVersionIE3 = $00040046;
+  ComCtlVersionIE4 = $00040047;
+  ComCtlVersionIE401 = $00040048;
+  ComCtlVersionIE5 = $00050050;
+
+function GetComCtlVersion: Integer;
+procedure CheckToolMenuDropdown(ToolButton: TToolButton);
+
+implementation

@@ -1,0 +1,1505 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{       XML Schema Support                              }
+{                                                       }
+{   Copyright (c) 20001 Borland Software Corporation    }
+{                                                       }
+{*******************************************************}
+
+unit XMLSchema;
+
+interface
+
+uses SysUtils, Variants, Classes, xmldom, XMLDoc, XMLIntf;
+
+const
+  SXMLSchemaExt = '.xsd';   { Default }
+  SXMLSchemaPrefix = 'xs';  { Default }
+  SXMLSchemaLocation = 'schemaLocation';
+  SXMLNoNSSchemaLocation = 'noNamespaceSchemaLocation';
+  { Working Drafts - 5 November 1999 to 7 April 2000  }
+  SXMLSchemaURI_1999 = SHttp+'/www.w3.org/1999/XMLSchema';
+  SXMLSchemaInstURI_1999 = SHttp+'/www.w3.org/1999/XMLSchema-instance';
+  { Working Draft 22 September 2000 to Candidate Rec. 10 October 2000 }
+  SXMLSchemaURI_2000_10 = SHttp+'/www.w3.org/2000/10/XMLSchema';
+  SXMLSchemaInstURI_2000_10 = SHttp+'/www.w3.org/2000/10/XMLSchema-instance';
+  { Proposed Rec. 16 March 2001 to Final Rec. 02 May 2001  }
+  SXMLSchemaURI_2001 = SHttp+'/www.w3.org/2001/XMLSchema';
+  SXMLSchemaInstURI = SHttp+'/www.w3.org/2001/XMLSchema-instance';
+
+type
+
+{ Exceptions }
+
+  ESchemaError = class(EXMLDocError);
+  ESchemaValidation = class(ESchemaError);
+  ESchemaParse = class(ESchemaError);
+
+{ Misc. types }
+
+  TFormChoice = (fcQualified, fcUnqualified);
+  TCompositorType = (ctAll, ctChoice, ctSequence);
+  TContentModel = (cmALL, cmChoice, cmSequence, cmGroupRef, cmEmpty);
+  TDerivationMethod = (dmNone, dmComplexExtension, dmComplexRestriction,
+    dmSimpleExtension, dmSimpleRestriction);
+
+{ Interface Forwards }
+
+  IXMLSchemaImport = interface;
+  IXMLSchemaInclude = interface;
+  IXMLTypeDef = interface;
+  IXMLSimpleTypeDef = interface;
+  IXMLComplexTypeDef = interface;
+  IXMLAttributeDef = interface;
+  IXMLElementDef = interface;
+  IXMLElementCompositor = interface;
+  IXMLAttributeGroup = interface;
+  IXMLElementGroup = interface;
+  IXMLNotation = interface;
+  IXMLAnnotation = interface;
+  IXMLAppInfo = interface;
+  IXMLDocumentation = interface;
+  IXMLEnumeration = interface;
+  IXMLSchemaDef = interface;
+  IXMLSchemaDoc = interface;
+
+{ Collection Interface Forwards }
+
+  IXMLSchemaItems = interface;
+  IXMLComplexTypeDefs = interface;
+  IXMLSimpleTypeDefs = interface;
+  IXMLAttributeDefs = interface;
+  IXMLElementDefs = interface;
+  IXMLElementCompositors = interface;
+  IXMLAttributeGroups = interface;
+  IXMLElementGroups = interface;
+  IXMLNotationDefs = interface;
+  IXMLAnnotationItems = interface;
+  IXMLAppInfoCollection = interface;
+  IXMLDocumentationCollection = interface;
+  IXMLEnumerationCollection = interface;
+
+{ IXMLElementDefList }
+
+  IXMLElementDefList = interface(IInterfaceList)
+    ['{BA009DE0-8372-11D4-8E37-00C0F056BC66}']
+    function GetElementDef(const Index: Integer): IXMLElementDef;
+    property ElementDefs[const Index: Integer]: IXMLElementDef; default;
+  end;
+
+{ IXMLAttributeDefList }
+
+  IXMLAttributeDefList = interface(IInterfaceList)
+    ['{6C15F622-846C-11D4-8E37-00C0F056BC66}']
+    function GetAttributeDef(const Index: Integer): IXMLAttributeDef;
+    property AttributeDefs[const Index: Integer]: IXMLAttributeDef; default;
+  end;
+
+{ IXMLSchemaNode }
+
+  IXMLSchemaNode = interface(IXMLNode)
+   ['{2DF0AEF7-6A69-45DB-8F4D-C00D6BE3F0AA}']
+    { Property Accessors }
+    function GetSchemaDef: IXMLSchemaDef;
+    { Public Properties }
+    property SchemaDef: IXMLSchemaDef;
+  end;
+
+{ IXMLAnnotatedItem }
+
+  IXMLAnnotatedItem = interface(IXMLSchemaNode)
+   ['{7EDFC120-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetAppInfoCollection: IXMLAppInfoCollection;
+    function GetDocumentationCollection: IXMLDocumentationCollection;
+    { Public Methods }
+    function HasAnnotation: Boolean;
+    procedure RemoveAnnotation(OnlyIfEmpty: Boolean = True);
+    { Public Properties }
+    property AppInfo: IXMLAppInfoCollection;
+    property Documentation: IXMLDocumentationCollection;
+  end;
+
+{ IXMLSchemaDocRef }
+
+  IXMLSchemaDocRef = interface(IXMLAnnotatedItem)
+    ['{501411A9-74B8-46AF-A145-12E3A46A7DA4}']
+    { Property Accessors }
+    function GetSchemaLocation: DOMString;
+    function GetSchemaRef: IXMLSchemaDef;
+    procedure SetSchemaLocation(const Value: DOMString);
+    { Public Properties }
+    property SchemaRef: IXMLSchemaDef;
+    property SchemaLocation: DOMString;
+  end;
+
+{ IXMLSchemaImport }
+
+  IXMLSchemaImport = interface(IXMLSchemaDocRef)
+    ['{C15D7ABA-CAB6-4230-A732-BFC3C95F7B1A}']
+  end;
+
+{ IXMLSchemaInclude }
+
+  IXMLSchemaInclude = interface(IXMLSchemaDocRef)
+    ['{9C3A2E64-8CA5-403D-B557-1E28A9570720}']
+  end;
+
+{ IXMLSchemaItem }
+
+  IXMLSchemaItem = interface(IXMLAnnotatedItem)
+   ['{7EDFC120-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetName: DOMString;
+    procedure SetName(const Value: DOMString);
+    { Public Methods }
+    function IsGlobal: Boolean;
+    function ItemLocalName: DOMString;
+    { Public Properties }
+    property Name: DOMString;
+  end;
+
+{ IXMLTypeDef }
+
+  IXMLTypeDef = interface(IXMLSchemaItem)
+    ['{7EDFC121-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetBaseType: IXMLTypeDef;
+    function GetBaseTypeName: DOMString;
+    function GetBounded: Variant;
+    function GetCardinality: Variant;
+    function GetEnumerations: IXMLEnumerationCollection;
+    function GetFractionalDigits: Variant;
+    function GetLength: Variant;
+    function GetMaxExclusive: Variant;
+    function GetMaxInclusive: Variant;
+    function GetMaxLength: Variant;
+    function GetMinExclusive: Variant;
+    function GetMinInclusive: Variant;
+    function GetMinLength: Variant;
+    function GetNumeric: Variant;
+    function GetOrdered: Variant;
+    function GetPattern: Variant;
+    function GetTotalDigits: Variant;
+    function GetWhitespace: Variant;
+    procedure SetBaseTypeName(const Value: DOMString);
+    procedure SetBounded(const Value: Variant);
+    procedure SetCardinality(const Value: Variant);
+    procedure SetFractionalDigits(const Value: Variant);
+    procedure SetLength(const Value: Variant);
+    procedure SetMaxExclusive(const Value: Variant);
+    procedure SetMaxInclusive(const Value: Variant);
+    procedure SetMaxLength(const Value: Variant);
+    procedure SetMinExclusive(const Value: Variant);
+    procedure SetMinInclusive(const Value: Variant);
+    procedure SetMinLength(const Value: Variant);
+    procedure SetNumeric(const Value: Variant);
+    procedure SetOrdered(const Value: Variant);
+    procedure SetPattern(const Value: Variant);
+    procedure SetTotalDigits(const Value: Variant);
+    procedure SetWhitespace(const Value: Variant);
+    { Public Methods & Properties }
+    function IsAnonymous: Boolean;
+    function IsComplex: Boolean;
+    property BaseType: IXMLTypeDef;
+    property BaseTypeName: DOMString;
+    property Enumerations: IXMLEnumerationCollection;
+    { Facets (in spec order) }
+    property Ordered: Variant;
+    property Bounded: Variant;
+    property Cardinality: Variant;
+    property Numeric: Variant;
+    property Length: Variant;
+    property MinLength: Variant;
+    property MaxLength: Variant;
+    property Pattern : Variant;
+    property Whitespace: Variant;
+    property MaxInclusive: Variant;
+    property MaxExclusive: Variant;
+    property MinInclusive: Variant;
+    property MinExclusive: Variant;
+    property TotalDigits: Variant;
+    property FractionalDigits: Variant;
+  end;
+
+{ IXMLTypeRestriction }
+
+  IXMLTypeRestriction = interface(IXMLSchemaNode)
+    ['{7BE665E6-9D59-4E27-AF37-587A8CCA6306}']
+    { Property Accessors }
+    function GetBaseName: DOMString;
+    procedure SetBaseName(const Value: DOMString);
+    { Public Properties }
+    property BaseName: DOMString;
+  end;
+
+{ IXMLSimpleTypeDef }
+
+  IXMLSimpleTypeDef = interface(IXMLTypeDef)
+    ['{7EDFC122-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetRestrictionNode: IXMLTypeRestriction;
+    { Public Methods & Properties }
+    function IsBuiltInType: Boolean;
+    property RestrictionNode: IXMLTypeRestriction;
+  end;
+
+{ IXMLBaseTypeIndicator }
+
+  IXMLBaseTypeIndicator = interface(IXMLSchemaNode)
+    ['{3DD57E4A-43AC-4C12-B878-B10C7BFE19D4}']
+    { Property Accessors }
+    function GetMixed: Variant;
+    procedure SetMixed(const Value: Variant);
+    { Public Properties }
+    property Mixed: Variant;
+  end;
+
+{ IXMLComplexTypeDef }
+
+  IXMLComplexTypeDef = interface(IXMLTypeDef)
+    ['{7EDFC123-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetAbstract: Boolean;
+    function GetAttributeDefList: IXMLAttributeDefList;
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetBaseTypeIndicator: IXMLBaseTypeIndicator;
+    function GetCompositorNode: IXMLElementCompositor;
+    function GetCompositors: IXMLElementCompositors;
+    function GetContentModel: TContentModel;
+    function GetDerivationMethod: TDerivationMethod;
+    function GetElementDefList: IXMLElementDefList;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetGroupRef: IXMLElementGroup;
+    procedure SetAbstract(const Value: Boolean);
+    procedure SetContentModel(const Value: TContentModel);
+    procedure SetDerivationMethod(const Value: TDerivationMethod);
+    { Public Properties }
+    property AbstractType: Boolean;
+    property AttributeDefs: IXMLAttributeDefs;
+    property AttributeDefList: IXMLAttributeDefList;
+    property AttributeGroups: IXMLAttributeGroups;
+    property BaseTypeIndicator: IXMLBaseTypeIndicator;
+    property CompositorNode: IXMLElementCompositor;
+    property ContentModel: TContentModel;
+    property DerivationMethod: TDerivationMethod;
+    property ElementCompositors: IXMLElementCompositors;
+    property ElementDefList: IXMLElementDefList;
+    property ElementDefs: IXMLElementDefs;
+    property ElementGroups: IXMLElementGroups;
+    property GroupRef: IXMLElementGroup;
+  end;
+
+{ IXMLSchemaRefItem }
+
+  IXMLSchemaRefItem = interface(IXMLSchemaItem)
+   ['{41465201-D39A-4C39-ACBE-C3AF64F0720D}']
+    { Property Accessors }
+    function GetRefName: DOMString;
+    procedure SetRefName( const Value: DOMString);
+    { Public Properties and Methods }
+    function GlobalCollection: IXMLSchemaItems;
+    property RefName: DOMString;
+  end;
+
+{ IXMLTypedSchemaItem }
+
+  IXMLTypedSchemaItem = interface(IXMLSchemaRefItem)
+    ['{75D91C7E-6DFF-44CA-91E0-34E4314AE9D4}']
+    { Property Accessors }
+    function GetDataType: IXMLTypeDef;
+    function GetDataTypeName: DOMString;
+    procedure SetDataType(const Value: IXMLTypeDef);
+    procedure SetDataTypeName(const Value: DOMString);
+    { Public Properties }
+    property DataType: IXMLTypeDef;
+    property DataTypeName: DOMString;
+  end;
+
+{ IXMLAttributeDef }
+
+  IXMLAttributeDef = interface(IXMLTypedSchemaItem)
+    ['{7EDFC125-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetRef: IXMLAttributeDef;
+    function GetUse: Variant;
+    function GetDefault: Variant;
+    function GetFixed: Variant;
+    procedure SetRef(const Value: IXMLAttributeDef);
+    procedure SetUse(const Value: Variant);
+    procedure SetDefault(const Value: Variant);
+    procedure SetFixed(const Value: Variant);
+    { Public Properties }
+    property Ref: IXMLAttributeDef;
+    property Use: Variant;
+    property Default: Variant;
+    property Fixed: Variant;
+  end;
+
+{ IXMLElementDef }
+
+  IXMLElementDef = interface(IXMLTypedSchemaItem)
+    ['{7EDFC124-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetAttributeDefList: IXMLAttributeDefList;
+    function GetChildElementList: IXMLElementDefList;
+    function GetMaxOccurs: Variant;
+    function GetMinOccurs: Variant;
+    function GetRef: IXMLElementDef;
+    procedure SetMaxOccurs(const Value: Variant);
+    procedure SetMinOccurs(const Value: Variant);
+    procedure SetRef(const Value: IXMLElementDef);
+    { Public Methods & Properties }
+    function IsRepeating: Boolean;
+    property AttributeDefs: IXMLAttributeDefList;
+    property ChildElements: IXMLElementDefList;
+    property MaxOccurs: Variant;
+    property MinOccurs: Variant;
+    property Ref: IXMLElementDef;
+  end;
+
+{ IXMLElementCompositor }
+
+  IXMLElementCompositor = interface(IXMLAnnotatedItem)
+    ['{0B007C80-648B-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetCompositors: IXMLElementCompositors;
+    function GetCompositorType: TCompositorType;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetMaxOccurs: Variant;
+    function GetMinOccurs: Variant;
+    procedure SetMaxOccurs(const Value: Variant);
+    procedure SetMinOccurs(const Value: Variant);
+    { Public Properties }
+    property Compositors: IXMLElementCompositors;
+    property CompositorType: TCompositorType;
+    property ElementDefs: IXMLElementDefs;
+    property ElementGroups: IXMLElementGroups;
+    property MaxOccurs: Variant;
+    property MinOccurs: Variant;
+  end;
+
+{ IXMLAttributeGroup }
+
+  IXMLAttributeGroup = interface(IXMLSchemaRefItem)
+    ['{8E5DB500-63C5-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetRef: IXMLAttributeGroup;
+    procedure SetRef(const Value: IXMLAttributeGroup);
+    { Public Properties }
+    property AttributeDefs: IXMLAttributeDefs;
+    property AttributeGroups: IXMLAttributeGroups;
+    property Ref: IXMLAttributeGroup;
+  end;
+
+{ IXMLElementGroup }
+
+  IXMLElementGroup = interface(IXMLSchemaRefItem)
+    ['{53F27080-4DAF-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetCompositorNode: IXMLElementCompositor;
+    function GetElementCompositors: IXMLElementCompositors;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetRef: IXMLElementGroup;
+    procedure SetRef(const Value: IXMLElementGroup);
+    { Public Properties }
+    property CompositorNode: IXMLElementCompositor;
+    property ElementCompositors: IXMLElementCompositors;
+    property ElementDefs: IXMLElementDefs;
+    property ElementGroups: IXMLElementGroups;
+    property Ref: IXMLElementGroup;
+  end;
+
+{ IXMLNotation }
+
+  IXMLNotation = interface(IXMLSchemaItem)
+    ['{6BC9D168-3AA1-4F00-A025-DAD2CD02E5B3}']
+    { Property Accessors }
+    procedure SetPublicID(const Value: Variant);
+    procedure SetSystemID(const Value: Variant);
+    function GetPublicID: Variant;
+    function GetSystemID: Variant;
+    { Public Properties }
+    property PublicID: Variant;
+    property SystemID: Variant;
+  end;
+
+{ IXMLAnnotation }
+
+  IXMLAnnotation = interface(IXMLSchemaNode)
+  ['{F3A9316D-4AF3-4CD7-8C5B-DBFEF236A8DA}']
+    function GetAppInfoCollection: IXMLAppInfoCollection;
+    function GetDocumentationCollection: IXMLDocumentationCollection;
+    function HasAppInfo: Boolean;
+    function HasDocumentation: Boolean;
+    property AppInfo: IXMLAppInfoCollection;
+    property Documentation: IXMLDocumentationCollection;
+  end;
+
+{ IXMLAppInfo }
+
+  IXMLAppInfo = interface(IXMLSchemaNode)
+    ['{FE7435C8-806F-441F-9195-A23F777D1954}']
+    function GetSource: Variant;
+    procedure SetSource(const Value: Variant);
+    property Source: Variant;
+  end;
+
+{ IXMLDocumentation }
+
+  IXMLDocumentation = interface(IXMLSchemaNode)
+    ['{A1562492-BC31-4727-A690-17631848C2AF}']
+    function GetSource: Variant;
+    procedure SetSource(const Value: Variant);
+    property Source: Variant;
+  end;
+
+{ IXMLEnumeration }
+
+  IXMLEnumeration = interface(IXMLSchemaNode)
+    ['{FBF0F414-AA54-4ADD-BD64-EA15D5AD380E}']
+    function GetValue: Variant;
+    procedure SetValue(const Value: Variant);
+    property Value: Variant;
+  end;
+
+{ *** Collections *** }
+
+{ IXMLSchemaRefs }
+
+  IXMLSchemaDocRefs = interface(IXMLNodeCollection)
+    ['{3C32E7BD-5CEE-4757-9C1D-266BB11983FE}']
+    { Property Accessors }
+    function GetSchemaDocRef(Index: Integer): IXMLSchemaDocRef;
+    { Public Properties }
+    property SchemaDocRef[Index: Integer]: IXMLSchemaDocRef; default;
+  end;
+
+{ IXMLSchemaImports }
+
+  IXMLSchemaImports = interface(IXMLSchemaDocRefs)
+    ['{7EDFC126-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLSchemaImport;
+    { Public Methods & Properties }
+    function Add(const SchemaLocation: DOMString): IXMLSchemaImport; overload;
+    function Insert(Index: Integer): IXMLSchemaImport;
+    property Items[Index: Integer]: IXMLSchemaImport; default;
+  end;
+
+{ IXMLSchemaIncludes }
+
+  IXMLSchemaIncludes = interface(IXMLSchemaDocRefs)
+    ['{7D9A30D4-007E-47C1-9BC1-AF8A1919777B}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLSchemaInclude;
+    { Public Methods & Properties }
+    function Add(const SchemaLocation: DOMString): IXMLSchemaInclude; overload;
+    function Insert(Index: Integer): IXMLSchemaInclude;
+    property Items[Index: Integer]: IXMLSchemaInclude; default;
+  end;
+
+{ IXMLSchemaItems }
+
+  IXMLSchemaItems = interface(IXMLNodeCollection)
+    ['{7EDFC126-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetSchemaItem(Index: Integer): IXMLSchemaItem;
+    { Public Methods & Properties }
+    function FindItem(const Name: DOMString): IXMLSchemaItem;
+    function IndexOfItem(const Name: DOMString): Integer;
+    property Items[Index: Integer]: IXMLSchemaItem; default;
+  end;
+
+{ IXMLSimpleTypeDefs }
+
+  IXMLSimpleTypeDefs = interface(IXMLSchemaItems)
+    ['{7EDFC127-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLSimpleTypeDef;
+    { Public Methods & Properties }
+    function Add(const Name: DOMString; BaseTypeName: DOMString = ''): IXMLSimpleTypeDef; overload;
+    function Find(const Name: DOMString): IXMLSimpleTypeDef;
+    function Insert(Index: Integer): IXMLSimpleTypeDef;
+    property Items[Index: Integer]: IXMLSimpleTypeDef; default;
+  end;
+
+{ IXMLComplexTypeDefs }
+
+  IXMLComplexTypeDefs = interface(IXMLSchemaItems)
+    ['{7EDFC128-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLComplexTypeDef;
+    { Public Methods & Properties }
+    function Add(const Name: DOMString;
+      ContentModel: TContentModel = cmSequence): IXMLComplexTypeDef; overload;
+    function Add(const Name, BaseTypeName: DOMString;
+      DerivationMethod: TDerivationMethod = dmComplexExtension;
+      ContentModel: TContentModel = cmSequence): IXMLComplexTypeDef;  overload;
+    function Find(const Name: DOMString): IXMLComplexTypeDef;
+    function Insert(Index: Integer): IXMLComplexTypeDef;
+    property Items[Index: Integer]: IXMLComplexTypeDef; default;
+  end;
+
+{ IXMLAttributeDefs }
+
+  IXMLAttributeDefs = interface(IXMLSchemaItems)
+    ['{7EDFC131-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLAttributeDef;
+    { Public Methods & Properties }
+    function Add(const RefName: DOMString): IXMLAttributeDef; overload;
+    function Add(const Name, DataType: DOMString): IXMLAttributeDef; overload;
+    function Add(const Name: DOMString; LocalSimpleType: Boolean;
+      BaseTypeName: DOMString = ''): IXMLAttributeDef; overload;
+    function Find(const Name: DOMString): IXMLAttributeDef;
+    function Insert(Index: Integer): IXMLAttributeDef;
+    property Items[Index: Integer]: IXMLAttributeDef; default;
+  end;
+
+{ IXMLElementDefs }
+
+  IXMLElementDefs = interface(IXMLSchemaItems)
+    ['{7EDFC130-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLElementDef;
+    { Public Methods & Properties }
+    function Add(const RefName: DOMString): IXMLElementDef; overload;
+    function Add(const Name, DataType: DOMString): IXMLElementDef; overload;
+    function Add(const Name: DOMString; ComplexLocalType: Boolean;
+      BaseTypeName: DOMString = ''): IXMLElementDef; overload;
+    function Find(const Name: DOMString): IXMLElementDef;
+    function Insert(Index: Integer): IXMLElementDef;
+    property Items[Index: Integer]: IXMLElementDef; default;
+  end;
+
+{ IXMLAttributeGroups }
+
+  IXMLAttributeGroups = interface(IXMLSchemaItems)
+    ['{8E5DB501-63C5-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLAttributeGroup;
+    { Public Methods & Properties }
+    function Add: IXMLAttributeGroup;
+    function Find(const Name: DOMString): IXMLAttributeGroup;
+    function Insert(Index: Integer): IXMLAttributeGroup;
+    property Items[Index: Integer]: IXMLAttributeGroup; default;
+  end;
+
+{ IXMLElementGroups }
+
+  IXMLElementGroups = interface(IXMLSchemaItems)
+    ['{7EDFC129-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLElementGroup;
+    { Public Methods & Properties }
+    function Add(const NameOrRef: DOMString): IXMLElementGroup; overload;
+    function Find(const Name: DOMString): IXMLElementGroup;
+    function Insert(Index: Integer): IXMLElementGroup;
+    property Items[Index: Integer]: IXMLElementGroup; default;
+  end;
+
+{ IXMLElementCompositors }
+
+  IXMLElementCompositors = interface(IXMLSchemaItems)
+    ['{0B007C81-648B-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLElementCompositor;
+    { Public Methods & Properties }
+    function Add(CompositorType: TCompositorType = ctSequence): IXMLElementCompositor;
+    function Insert(Index: Integer): IXMLElementCompositor;
+    property Items[Index: Integer]: IXMLElementCompositor; default;
+  end;
+
+{ IXMLElementCompositors }
+
+  IXMLNotationDefs = interface(IXMLSchemaItems)
+    ['{6388BD4A-9E83-4249-A7F0-C8438F47D0AD}']
+    { Property Accessors }
+    function GetItem(Index: Integer): IXMLNotation;
+    { Public Methods & Properties }
+    function Add(const Name: DOMString; const APublicID: DOMString = '';
+      const ASystemID: DOMString = ''): IXMLNotation; overload;
+    function Insert(Index: Integer): IXMLNotation;
+    property Items[Index: Integer]: IXMLNotation; default;
+  end;
+
+{ IXMLAnnotations }
+
+  IXMLAnnotationItems = interface(IXMLNodeCollection)
+    ['{C6414FE7-A7AD-495B-9302-2E65537FE0A1}']
+    function Add: IXMLAnnotation;
+    function GetItem(Index: Integer): IXMLAnnotation;
+    function Insert(Index: Integer): IXMLAnnotation;
+  end;
+
+{ IXMLAppInfoCollection }
+
+  IXMLAppInfoCollection = interface(IXMLNodeCollection)
+    ['{6C5C9808-FE59-4A7E-A38A-A17F710C0BE7}']
+    function Add: IXMLAppInfo;
+    function GetAppInfo(const AppInfoType: TGuid;
+      AppInfoClassType: TXMLNodeClass = nil): IXMLAppInfo;
+    function GetItem(Index: Integer): IXMLAppInfo;
+    function Insert(Index: Integer): IXMLAppInfo;
+    property Items[Index: Integer]: IXMLAppInfo; default;
+  end;
+
+{ IXMLDocumentationCollection }
+
+  IXMLDocumentationCollection = interface(IXMLNodeCollection)
+    ['{F7820DA4-7C00-40D0-9F2C-AF726D8D4353}']
+    function Add: IXMLDocumentation;
+    function GetItem(Index: Integer): IXMLDocumentation;
+    function Insert(Index: Integer): IXMLDocumentation;
+    property Items[Index: Integer]: IXMLDocumentation; default;
+  end;
+
+{ IXMLEnumerationCollection }
+
+  IXMLEnumerationCollection = interface(IXMLNodeCollection)
+    ['{3EB8EB97-1343-40E1-9E85-5E29C4EDD8C4}']
+    function Add(const Value: DOMString): IXMLEnumeration;
+    function GetItem(Index: Integer): IXMLEnumeration;
+    function Insert(Index: Integer): IXMLEnumeration;
+    property Items[Index: Integer]: IXMLEnumeration; default;
+  end;
+
+{ IXMLSchemaDef }
+
+  IXMLSchemaDef = interface(IXMLNOde)
+    ['{7EDFC132-4C43-11D4-83DA-00C04F60B2DD}']
+    { Property Accessors }
+    function GetAnnotations: IXMLAnnotationItems;
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeFormDefault: TFormChoice;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetBuiltInTypes: IXMLSimpleTypeDefs;
+    function GetComplexTypes: IXMLComplexTypeDefs;
+    function GetDocElementDef: IXMLElementDef;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementFormDefault: TFormChoice;
+    function GetElementGroups: IXMLElementGroups;
+    function GetNotationDefs: IXMLNotationDefs;
+    function GetSchemaDoc: IXMLSchemaDoc;
+    function GetSchemaImports: IXMLSchemaImports;
+    function GetSchemaIncludes: IXMLSchemaIncludes;
+    function GetSimpleTypes: IXMLSimpleTypeDefs;
+    function GetStrictFormat: Boolean;
+    function GetTargetNamespace: OleVariant;
+    function GetTargetNSPrefix: DOMString;
+    function GetVersion: DOMString;
+    procedure SetAttributeformDefault(const Value: TFormChoice);
+    procedure SetDocElementDef(const Value: IXMLElementDef);
+    procedure SetElementformDefault(const Value: TFormChoice);
+    procedure SetStrictFormat(const Value: Boolean);
+    procedure SetVersion(const Value: DOMString);
+    { Public Methods }
+    function PrefixedTypeName(const TypeName: DOMString): DOMString;
+    procedure RegisterAppInfo(const NamespaceURI, Prefix: DOMString;
+      NodeClass: TXMLNodeClass);
+    procedure SetTargetNamespace(const NamespaceURI, NSPrefix: DOMString);
+    { Public Properties }
+    property Annotations: IXMLAnnotationItems;
+    property AttributeDefs: IXMLAttributeDefs;
+    property AttributeFormDefault: TFormChoice;
+    property AttributeGroups: IXMLAttributeGroups;
+    property BuiltInTypes: IXMLSimpleTypeDefs;
+    property ComplexTypes: IXMLComplexTypeDefs;
+    property DocElementDef: IXMLElementDef;
+    property ElementDefs: IXMLElementDefs;
+    property ElementFormDefault: TFormChoice;
+    property ElementGroups: IXMLElementGroups;
+    property NotationDefs: IXMLNotationDefs;
+    property SchemaDoc: IXMLSchemaDoc;
+    property SchemaImports: IXMLSchemaImports;
+    property SchemaIncludes: IXMLSchemaIncludes;
+    property SimpleTypes: IXMLSimpleTypeDefs;
+    property StrictFormat: Boolean;
+    property TargetNamespace: OleVariant;
+    property TargetNSPrefix: DOMString;
+    property Version: DOMString;
+  end;
+
+{ IXMLSchemaDoc }
+
+// To disambiguiate between IXMLDocument in msxml.h and the
+// one defined in Xmlintf.pas
+{$IFDEF MSWINDOWS}
+(*$HPPEMIT 'namespace Xmlschema {'         *)
+(*$HPPEMIT 'using Xmlintf::IXMLDocument;'  *)
+(*$HPPEMIT '};'                            *)
+{$ENDIF}
+
+  IXMLSchemaDoc = interface(IXMLDocument)
+    ['{4E6B683C-15F4-4F62-9B4B-DF3130420F62}']
+    { Property Accessors }
+    function GetSchemaDef: IXMLSchemaDef;
+    function GetWasImported: Boolean;
+    { Public Properties }
+    property SchemaDef: IXMLSchemaDef;
+    property WasImported: Boolean;
+  end;
+
+{ IXMLSchemaTranslator }
+
+  IXMLSchemaTranslator = interface(IInterface)
+    ['{9C4DB79C-1D60-4BF2-95EE-63FDF98237D0}']
+    procedure Translate(const FileName: DOMString; const SchemaDef: IXMLSchemaDef);
+  end;
+
+{ IXMLSchemaTranslatorFactory }
+
+  IXMLSchemaTranslatorFactory = interface(IInterface)
+    ['{AAB226EE-51C1-4902-B883-FE538EB1F27E}']
+    { Public Methods }
+    function CanExportFile(const FileName: WideString): Boolean;
+    function CanImportFile(const FileName: WideString): Boolean;
+    function GetExportTranslator: IXMLSchemaTranslator;
+    function GetImportTranslator: IXMLSchemaTranslator;
+    function GetTranslatorDescription: WideString;
+  end;
+
+
+{ ======================================================================== }
+{                          Implementing Classes                            }
+{ ======================================================================== }
+
+{ Class Forwards }
+
+  TXMLSchemaItems = class;
+  TXMLComplexTypeDefs = class;
+  TXMLSimpleTypeDefs = class;
+  TXMLAttributeDefs = class;
+  TXMLElementDefs = class;
+  TXMLElementCompositors = class;
+  TXMLAttributeGroups = class;
+  TXMLElementGroups = class;
+  TXMLNotationDefs = class;
+  TXMLAppInfoCollection = class;
+  TXMLDocumentationCollection = class;
+  TXMLEnumerationCollection = class;
+
+{ TXMLAttributeDefList }
+
+  TXMLAttributeDefList = class(TInterfaceList, IXMLAttributeDefList)
+    function GetAttributeDef(const Index: Integer): IXMLAttributeDef;
+  end;
+
+{ TXMLElementDefList }
+
+  TXMLElementDefList = class(TInterfaceList, IXMLElementDefList)
+    function GetElementDef(const Index: Integer): IXMLElementDef;
+  end;
+
+{ TXMLSchemaNode }
+
+  TXMLSchemaDef = class;
+
+  TXMLSchemaNode = class(TXMLNode, IXMLSchemaNode)
+  protected
+    function SchemaObject: TXMLSchemaDef;
+    { IXMLSchemaNode interface }
+    function GetSchemaDef: IXMLSchemaDef;
+    property SchemaDef: IXMLSchemaDef;
+  end;
+
+{ TXMLSchemaItem }
+
+  TXMLSchemaItem = class(TXMLSchemaNode, IXMLAnnotatedItem, IXMLSchemaItem, IXMLSchemaRefItem)
+  protected
+    { IXMLSchemaRefItem interface }
+    function GlobalCollection: IXMLSchemaItems; virtual; 
+    function GetRefItem: IXMLSchemaRefItem;
+    procedure SetRefItem(const Value: IXMLSchemaRefItem); virtual;
+    function IsGlobal: Boolean;
+    { IXMLSchemaItem interface }
+    function GetAnnotation: IXMLAnnotation;
+    function GetAppInfoCollection: IXMLAppInfoCollection;
+    function GetDocumentationCollection: IXMLDocumentationCollection;
+    function GetName: DOMString; virtual;
+    function GetRefName: DOMString;
+    procedure SetName(const Value: DOMString); virtual;
+    procedure SetRefName(const Value: DOMString);
+    function HasAnnotation: Boolean;
+    function ItemLocalName: DOMString;
+    procedure RemoveAnnotation(OnlyIfEmpty: Boolean = True);
+  protected
+    property Annotation: IXMLAnnotation;
+    property RefItem: IXMLSchemaRefItem;
+    property SchemaDef: IXMLSchemaDef;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLSchemaDocRef }
+
+  TXMLSchemaDocRef = class(TXMLSchemaItem, IXMLSchemaDocRef)
+  protected
+    { IXMLSchemaDocRef }
+    function GetSchemaLocation: DOMString;
+    function GetSchemaRef: IXMLSchemaDef;
+    procedure SetSchemaLocation(const Value: DOMString);
+  end;
+
+{ TXMLSchemaImport }
+
+  TXMLSchemaImport = class(TXMLSchemaDocRef, IXMLSchemaImport)
+  end;
+
+{ TXMLSchemaInclude }
+
+  TXMLSchemaInclude = class(TXMLSchemaDocRef, IXMLSchemaInclude)
+  end;
+
+{ TXMLTypeDef }
+
+  TXMLTypeDef = class(TXMLSchemaItem, IXMLTypeDef)
+  protected
+    function ReadFacet(const FacetName: string): Variant; virtual;
+    function GetFacetParentNode(const Required: Boolean=True): IXMLNode; virtual; abstract;
+  protected
+    { IXMLSchemaItem overrides }
+    function GetName: DOMString; override;
+    procedure SetName(const Value: DOMString); override;
+    { IXMLTypeDef }
+    function GetBaseType: IXMLTypeDef; virtual; abstract;
+    function GetBaseTypeName: DOMString;
+    function GetBounded: Variant;
+    function GetCardinality: Variant;
+    function GetEnumerations: IXMLEnumerationCollection;
+    function GetFractionalDigits: Variant;
+    function GetLength: Variant;
+    function GetMaxExclusive: Variant;
+    function GetMaxInclusive: Variant;
+    function GetMaxLength: Variant;
+    function GetMinExclusive: Variant;
+    function GetMinInclusive: Variant;
+    function GetMinLength: Variant;
+    function GetNumeric: Variant;
+    function GetOrdered: Variant;
+    function GetPattern: Variant;
+    function GetTotalDigits: Variant;
+    function GetWhitespace: Variant;
+    function IsAnonymous: Boolean;
+    function IsComplex: Boolean; virtual;
+    procedure SetBaseTypeName(const Value: DOMString); virtual; abstract;
+    procedure SetBounded(const Value: Variant);
+    procedure SetCardinality(const Value: Variant);
+    procedure SetFractionalDigits(const Value: Variant);
+    procedure SetLength(const Value: Variant);
+    procedure SetMaxExclusive(const Value: Variant);
+    procedure SetMaxInclusive(const Value: Variant);
+    procedure SetMaxLength(const Value: Variant);
+    procedure SetMinExclusive(const Value: Variant);
+    procedure SetMinInclusive(const Value: Variant);
+    procedure SetMinLength(const Value: Variant);
+    procedure SetNumeric(const Value: Variant);
+    procedure SetOrdered(const Value: Variant);
+    procedure SetPattern(const Value: Variant);
+    procedure SetTotalDigits(const Value: Variant);
+    procedure SetWhitespace(const Value: Variant);
+    procedure WriteFacet(const FacetName: string; const Value: Variant);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLTypeRestriction }
+
+  TXMLTypeRestriction = class(TXMLSchemaNode, IXMLTypeRestriction)
+  protected
+    { IXMLTypeRestriction }
+    function GetBaseName: DOMString;
+    procedure SetBaseName(const Value: DOMString);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLSimpleTypeDef }
+
+  TXMLSimpleTypeDef = class(TXMLTypeDef, IXMLSimpleTypeDef)
+  protected
+    function GetFacetParentNode(const Required: Boolean=True): IXMLNode; override;
+    function GetRestrictionNode: IXMLTypeRestriction;
+    { IXMLTypeDef }
+    function GetBaseType: IXMLTypeDef; override;
+    function IsAnonymous: Boolean;
+    function IsBuiltInType: Boolean;
+    procedure SetBaseTypeName(const Value: DOMString); override;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ IXMLComplexContent }
+
+  IXMLComplexContent = interface(IXMLSchemaNode)
+    ['{33A54303-05F7-4BF3-B2BB-61F9CD3C1CBB}']
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetCompositorNode: IXMLElementCompositor;
+    function GetCompositors: IXMLElementCompositors;
+    function GetContentModel: TContentModel;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetGroupRef: IXMLElementGroup;
+    procedure SetContentModel(const Value: TContentModel);
+  end;
+
+{ TXMLComplexContent }
+
+  TXMLComplexContent = class(TXMLSchemaNode, IXMLComplexContent)
+  protected
+    function GetCompositorNode: IXMLElementCompositor;
+    { IXMLComplexContent }
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetCompositors: IXMLElementCompositors;
+    function GetContentModel: TContentModel;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetGroupRef: IXMLElementGroup;
+    procedure SetContentModel(const Value: TContentModel);
+  public
+    procedure AfterConstruction; override;
+    property CompositorNode: IXMLElementCompositor;
+  end;
+
+{ TXMLBaseTypeIndicator }
+
+  TXMLBaseTypeIndicator = class(TXMLSchemaNode, IXMLBaseTypeIndicator)
+  protected
+    { IXMLBaseTypeIndicator }
+    function GetMixed: Variant;
+    procedure SetMixed(const Value: Variant);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLComplexTypeDef }
+
+  TXMLComplexTypeDef = class(TXMLTypeDef, IXMLComplexTypeDef)
+  protected
+    procedure AttributesChanged;
+    procedure ChildElementsChanged;
+    procedure CheckContent;
+    function GetContentNode: IXMLComplexContent;
+    function GetFacetParentNode(const Required: Boolean=True): IXMLNode; override;
+    { IXMLComplexTypeDef interface }
+    function GetAbstract: Boolean;
+    function GetAttributeDefList: IXMLAttributeDefList;
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetBaseType: IXMLTypeDef; override;
+    function GetBaseTypeIndicator: IXMLBaseTypeIndicator;
+    function GetCompositorNode: IXMLElementCompositor;
+    function GetCompositors: IXMLElementCompositors;
+    function GetContentModel: TContentModel;
+    function GetDerivationMethod: TDerivationMethod;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementDefList: IXMLElementDefList;
+    function GetElementGroups: IXMLElementGroups;
+    function GetGroupRef: IXMLElementGroup;
+    function IsComplex: Boolean; override;
+    procedure SetAbstract(const Value: Boolean);
+    procedure SetBaseTypeName(const Value: DOMString); override;
+    procedure SetContentModel(const Value: TContentModel);
+    procedure SetDerivationMethod(const Value: TDerivationMethod);
+  public
+    procedure AfterConstruction; override;
+    property ContentNode: IXMLComplexContent;
+  end;
+
+{ TXMLTypedSchemaItem }
+
+  TXMLTypedSchemaItem = class(TXMLSchemaItem, IXMLTypedSchemaItem)
+  protected
+    procedure RemoveTypeInfo;
+    procedure SetRefItem(const Value: IXMLSchemaRefItem); override;
+    { IXMLTypedSchemaItem }
+    function GetDataType: IXMLTypeDef;
+    function GetDataTypeName: DOMString;
+    procedure SetDataType(const Value: IXMLTypeDef);
+    procedure SetDataTypeName(const Value: DOMString);
+    property DataType: IXMLTypeDef;
+  end;
+
+{ TXMLAttributeDef }
+
+  TXMLAttributeDef = class(TXMLTypedSchemaItem, IXMLAttributeDef)
+  protected
+    { IXMLSchemaRefItem }
+    function GlobalCollection: IXMLSchemaItems; override;
+    { IXMLAttributeDef interface }
+    function GetRef: IXMLAttributeDef;
+    function GetUse: Variant;
+    function GetDefault: Variant;
+    function GetFixed: Variant;
+    procedure SetRef(const Value: IXMLAttributeDef);
+    procedure SetUse(const Value: Variant);
+    procedure SetDefault(const Value: Variant);
+    procedure SetFixed(const Value: Variant);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLElementDef }
+
+  TXMLElementDef = class(TXMLTypedSchemaItem, IXMLElementDef)
+  protected
+    { IXMLSchemaRefItem }
+    function GlobalCollection: IXMLSchemaItems; override;
+    { IXMLElementDef interface }
+    function GetAttributeDefList: IXMLAttributeDefList;
+    function GetChildElementList: IXMLElementDefList;
+    function GetMaxOccurs: Variant;
+    function GetMinOccurs: Variant;
+    function GetRef: IXMLElementDef;
+    function IsRepeating: Boolean;
+    procedure SetMaxOccurs(const Value: Variant);
+    procedure SetMinOccurs(const Value: Variant);
+    procedure SetRef(const Value: IXMLElementDef);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLElementCompositor }
+
+  TXMLElementCompositor = class(TXMLSchemaItem, IXMLElementCompositor)
+  protected
+    { IXMLElementCompositor interface }
+    function GetCompositors: IXMLElementCompositors;
+    function GetCompositorType: TCompositorType;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetMaxOccurs: Variant;
+    function GetMinOccurs: Variant;
+    procedure SetMaxOccurs(const Value: Variant);
+    procedure SetMinOccurs(const Value: Variant);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLAttributeGroup }
+
+  TXMLAttributeGroup = class(TXMLSchemaItem, IXMLAttributeGroup)
+  protected
+    { IXMLSchemaRefItem }
+    function GlobalCollection: IXMLSchemaItems; override;
+    { IXMLAttributeGroup interface }
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetRef: IXMLAttributeGroup;
+    procedure SetRef(const Value: IXMLAttributeGroup);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLElementGroup }
+
+  TXMLElementGroup = class(TXMLSchemaItem, IXMLElementGroup)
+  protected
+    { IXMLSchemaRefItem }
+    function GlobalCollection: IXMLSchemaItems; override;
+    { IXMLElementGroup interface }
+    function GetCompositorNode: IXMLElementCompositor;
+    function GetElementCompositors: IXMLElementCompositors;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementGroups: IXMLElementGroups;
+    function GetRef: IXMLElementGroup;
+    procedure SetRef(const Value: IXMLElementGroup);
+  public
+    procedure AfterConstruction; override;
+    property ContentNode: IXMLElementCompositor;
+  end;
+
+{ TXMLNotationDef }
+
+  TXMLNotationDef = class(TXMLSchemaItem, IXMLNotation)
+  protected
+    { IXMLNotation interface }
+    procedure SetPublicID(const Value: Variant);
+    procedure SetSystemID(const Value: Variant);
+    function GetPublicID: Variant;
+    function GetSystemID: Variant;
+    property PublicID: Variant;
+    property SystemID: Variant;
+  end;
+
+{ TXMLAnnotationItem }
+
+  TXMLAnnotationItem = class(TXMLSchemaNode, IXMLAppInfo, IXMLDocumentation)
+  protected
+    { IXMLAppInfo & IXMLDocumentation }
+    function GetSource: Variant;
+    procedure SetSource(const Value: Variant);
+    property Source: Variant;
+  end;
+
+{ TXMLAnnotation }
+
+  TXMLAnnotation = class(TXMLSchemaNode, IXMLAnnotation)
+  protected
+    function CreateChildNode(const ADOMNode: IDOMNode): IXMLNode; override;
+    { IXMLAnnotation interface }
+    function HasAppInfo: Boolean;
+    function HasDocumentation: Boolean;
+    function GetAppInfoCollection: IXMLAppInfoCollection;
+    function GetDocumentationCollection: IXMLDocumentationCollection;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLEnumeration }
+
+  TXMLEnumeration = class(TXMLSchemaNode, IXMLEnumeration)
+  protected
+    { IXMLEnumeration interface }
+    function GetValue: Variant;
+    procedure SetValue(const Value: Variant);
+  end;
+
+{ *** Collections *** }
+
+{ TXMLSchemaDocRefs }
+
+  TXMLSchemaDocRefs = class(TXMLNodeCollection, IXMLSchemaDocRefs)
+  protected
+    function GetSchemaDocRef(Index: Integer): IXMLSchemaDocRef;
+  end;
+
+{ TXMLSchemaImports }
+
+  TXMLSchemaImports = class(TXMLSchemaDocRefs, IXMLSchemaImports)
+  protected
+    { IXMLSchemaImports }
+    function Add(const SchemaLocation: DOMString): IXMLSchemaImport; overload;
+    function Insert(Index: Integer): IXMLSchemaImport;
+    function GetItem(Index: Integer): IXMLSchemaImport;
+  end;
+
+{ TXMLSchemaIncludes }
+
+  TXMLSchemaIncludes = class(TXMLSchemaDocRefs, IXMLSchemaIncludes)
+  protected
+    { IXMLSchemaIncludes }
+    function Add(const SchemaLocation: DOMString): IXMLSchemaInclude; overload;
+    function Insert(Index: Integer): IXMLSchemaInclude;
+    function GetItem(Index: Integer): IXMLSchemaInclude;
+  end;
+
+{ TXMLSchemaItems }
+
+  TXMLSchemaItems = class(TXMLNodeCollection, IXMLSchemaItems)
+  protected
+    { IXMLSchemaItems interface }
+    function GetSchemaDef: IXMLSchemaDef;
+    function GetSchemaItem(Index: Integer): IXMLSchemaItem;
+    function FindItem(const Name: DOMString): IXMLSchemaItem;
+    function IndexOfItem(const Name: DOMString): Integer;
+    procedure SetSchemaDef(const Value: IXMLSchemaDef);
+  protected
+    function AddItem(Index: Integer): IXMLNode; override;
+    procedure CheckParent;
+    property SchemaDef: IXMLSchemaDef;
+    property IsGlobal: Boolean;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLSimpleTypeDefs }
+
+  TXMLSimpleTypeDefs = class(TXMLSchemaItems, IXMLSimpleTypeDefs)
+  protected
+    { IXMLSimpleTypeDefs interface }
+    function Add(const Name: DOMString; BaseTypeName: DOMString = ''): IXMLSimpleTypeDef;
+    function Find(const Name: DOMString): IXMLSimpleTypeDef;
+    function GetItem(Index: Integer): IXMLSimpleTypeDef;
+    function Insert(Index: Integer): IXMLSimpleTypeDef;
+  end;
+
+{ TXMLBuiltInTypeDefs }
+
+  TXMLBuiltInTypes = class(TXMLSimpleTypeDefs, IXMLSimpleTypeDefs)
+  protected
+    function IndexOfItem(const Name: DOMString): Integer;
+    function IsBuiltInTypeName(const Name: DOMString): Boolean;
+    { IXMLSimpleTypeDefs interface }
+    function Add(const Name: DOMString; BaseTypeName: DOMString = ''): IXMLSimpleTypeDef;
+    function Find(const Name: DOMString): IXMLSimpleTypeDef;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLComplexTypeDefs }
+
+  TXMLComplexTypeDefs = class(TXMLSchemaItems, IXMLComplexTypeDefs)
+  protected
+    { IXMLComplexTypeDefs interface }
+    function Add(const Name: DOMString;
+      ContentModel: TContentModel = cmSequence): IXMLComplexTypeDef; overload;
+    function Add(const Name, BaseTypeName: DOMString;
+      DerivationMethod: TDerivationMethod = dmComplexExtension;
+      ContentModel: TContentModel = cmSequence): IXMLComplexTypeDef;  overload;
+    function Find(const Name: DOMString): IXMLComplexTypeDef;
+    function GetItem(Index: Integer): IXMLComplexTypeDef;
+    function Insert(Index: Integer): IXMLComplexTypeDef;
+  end;
+
+{ TXMLAttributeDefs }
+
+  TXMLAttributeDefs = class(TXMLSchemaItems, IXMLAttributeDefs)
+  protected
+    procedure ChildListNotify(Operation: TNodeListOperation;
+      var Node: IXMLNode; const IndexOrName: OleVariant; BeforeOperation: Boolean); override;
+    { IXMLAttributeDefs interface }
+    function Add(const RefName: DOMString): IXMLAttributeDef; overload;
+    function Add(const Name, DataType: DOMString): IXMLAttributeDef; overload;
+    function Add(const Name: DOMString; LocalSimpleType: Boolean;
+      BaseTypeName: DOMString = ''): IXMLAttributeDef; overload;
+    function Find(const Name: DOMString): IXMLAttributeDef;
+    function GetItem(Index: Integer): IXMLAttributeDef;
+    function Insert(Index: Integer): IXMLAttributeDef;
+  end;
+
+{ TXMLElementDefs }
+
+  TXMLElementDefs = class(TXMLSchemaItems, IXMLElementDefs)
+  protected
+    procedure ChildListNotify(Operation: TNodeListOperation;
+      var Node: IXMLNode; const IndexOrName: OleVariant; BeforeOperation: Boolean); override;
+    procedure InternalAdd(const AElementDef: IXMLElementDef);
+    { IXMLElementDefs interface }
+    function Add(const RefName: DOMString): IXMLElementDef; overload;
+    function Add(const Name, DataType: DOMString): IXMLElementDef; overload;
+    function Add(const Name: DOMString; ComplexLocalType: Boolean;
+      BaseTypeName: DOMString = ''): IXMLElementDef; overload;
+    function Find(const Name: DOMString): IXMLElementDef;
+    function GetItem(Index: Integer): IXMLElementDef;
+    function Insert(Index: Integer): IXMLElementDef;
+  end;
+
+{ TXMLElementCompositors }
+
+  TXMLElementCompositors = class(TXMLSchemaItems, IXMLElementCompositors)
+  protected
+    { IXMLElementCompositors interface }
+    function Add(CompositorType: TCompositorType = ctSequence): IXMLElementCompositor;
+    function GetItem(Index: Integer): IXMLElementCompositor;
+    function Insert(Index: Integer): IXMLElementCompositor;
+  end;
+
+{ TXMLAttributeGroups }
+
+  TXMLAttributeGroups = class(TXMLSchemaItems, IXMLAttributeGroups)
+  protected
+    { IXMLAttributeGroups interface }
+    function Add: IXMLAttributeGroup;
+    function Find(const Name: DOMString): IXMLAttributeGroup;
+    function GetItem(Index: Integer): IXMLAttributeGroup;
+    function Insert(Index: Integer): IXMLAttributeGroup;
+  end;
+
+{ TXMLElementGroups }
+
+  TXMLElementGroups = class(TXMLSchemaItems, IXMLElementGroups)
+  protected
+    { IXMLElementGroups interface }
+    function Add(const NameOrRef: DOMString): IXMLElementGroup;
+    function Find(const Name: DOMString): IXMLElementGroup;
+    function GetItem(Index: Integer): IXMLElementGroup;
+    function Insert(Index: Integer): IXMLElementGroup;
+  end;
+
+{ TXMLNotationDefs }
+
+  TXMLNotationDefs = class(TXMLSchemaItems, IXMLNotationDefs)
+  protected
+    { IXMLNotationDefs interface }
+    function Add(const Name: DOMString; const APublicID: DOMString = '';
+      const ASystemID: DOMString = ''): IXMLNotation;
+    function GetItem(Index: Integer): IXMLNotation;
+    function Insert(Index: Integer): IXMLNotation;
+  end;
+
+{ TXMLAnnotationCollection }
+
+  TXMLAnnotationCollection = class(TXMLNodeCollection, IXMLAnnotationItems)
+  protected
+    { IXMLAnnotations interface }
+    function Add: IXMLAnnotation;
+    function GetItem(Index: Integer): IXMLAnnotation;
+    function Insert(Index: Integer): IXMLAnnotation;
+  end;
+
+{ TXMLAppInfoCollection }
+
+  TXMLAppInfoCollection = class(TXMLNodeCollection, IXMLAppInfoCollection)
+  protected
+    { IXMLAppInfoCollection interface }
+    function GetAppInfo(const AppInfoType: TGuid;
+      AppInfoClassType: TXMLNodeClass = nil): IXMLAppInfo;
+    function Add: IXMLAppInfo;
+    function GetItem(Index: Integer): IXMLAppInfo;
+    function Insert(Index: Integer): IXMLAppInfo;
+  end;
+
+{ TXMLDocumentationCollection }
+
+  TXMLDocumentationCollection = class(TXMLNodeCollection, IXMLDocumentationCollection)
+  protected
+    { IXMLDocumentationCollection interface }
+    function Add: IXMLDocumentation;
+    function GetItem(Index: Integer): IXMLDocumentation;
+    function Insert(Index: Integer): IXMLDocumentation;
+  end;
+
+{ TXMLEnumerationCollection }
+
+  TXMLEnumerationCollection = class(TXMLNodeCollection, IXMLEnumerationCollection)
+  protected
+    { IXMLEnumerationCollection interface }
+    function Add(const Value: DOMString): IXMLEnumeration;
+    function GetItem(Index: Integer): IXMLEnumeration;
+    function Insert(Index: Integer): IXMLEnumeration;
+  end;
+
+{ TXMLSchemaDef }
+
+  TAppInfoClassInfo = record
+    Prefix: DOMString;
+    NamespaceURI: DOMString;
+    NodeClass: TXMLNodeClass;
+  end;
+  TAppInfoClassArray = array of TAppInfoClassInfo;
+
+  TXMLSchemaDef = class(TXMLNode, IXMLSchemaDef)
+  protected
+    function FindAppInfoClass(const NamespaceURI: DOMString): TXMLNodeClass;
+    function GetFormChoice(const ChoiceName: DOMString): TFormChoice;
+    function LoadSchemaRef(SchemaLoc: DOMString): IXMLSchemaDef;
+    function LocateAppInfo(const NamespaceURI: DOMString;
+      var AppInfoClassInfo: TAppInfoClassInfo): Boolean;
+    procedure SetFormChoice(const ChoiceName: DOMString; const Value: TFormChoice);
+    { IXMLSchemaDef inteface }
+    function GetAnnotations: IXMLAnnotationItems;
+    function GetAttributeDefs: IXMLAttributeDefs;
+    function GetAttributeFormDefault: TFormChoice;
+    function GetAttributeGroups: IXMLAttributeGroups;
+    function GetBuiltInTypes: IXMLSimpleTypeDefs;
+    function GetComplexTypes: IXMLComplexTypeDefs;
+    function GetDocElementDef: IXMLElementDef;
+    function GetElementDefs: IXMLElementDefs;
+    function GetElementFormDefault: TFormChoice;
+    function GetElementGroups: IXMLElementGroups;
+    function GetNotationDefs: IXMLNotationDefs;
+    function GetSchemaDoc: IXMLSchemaDoc;
+    function GetSchemaImports: IXMLSchemaImports;
+    function GetSchemaIncludes: IXMLSchemaIncludes;
+    function GetSimpleTypes: IXMLSimpleTypeDefs;
+    function GetStrictFormat: Boolean;
+    function GetTargetNamespace: OleVariant;
+    function GetTargetNSPrefix: DOMString;
+    function GetVersion: DOMString;
+    function PrefixedTypeName(const TypeName: DOMString): DOMString;
+    procedure RegisterAppInfo(const NamespaceURI, Prefix: DOMString;
+      NodeClass: TXMLNodeClass);
+    procedure SetAttributeformDefault(const Value: TFormChoice);
+    procedure SetDocElementDef(const Value: IXMLElementDef);
+    procedure SetElementformDefault(const Value: TFormChoice);
+    procedure SetStrictFormat(const Value: Boolean);
+    procedure SetTargetNamespace(const NamespaceURI, NSPrefix: DOMString);
+    procedure SetVersion(const Value: DOMString);
+  public
+    procedure AfterConstruction; override;
+    property AttributeFormDefault: TFormChoice;
+    property DocElementDef: IXMLElementDef;
+    property ElementFormDefault: TFormChoice;
+    property IsLegacyFormat: Boolean;
+    property TargetNamespace: OleVariant;
+    property TargetNSPrefix: DOMString;
+    property Version: DOMString;
+  end;
+
+{ TXMLSchemaDoc }
+
+  TXMLSchemaDoc = class(TXMLDocument, IXMLSchemaDoc)
+  protected
+    { IXMLSchemaDoc }
+    function GetWasImported: Boolean;
+    function GetSchemaDef: IXMLSchemaDef;
+  protected
+    procedure CheckSchemaVersion; virtual;
+    procedure DoAfterOpen; override;
+    procedure LoadData; override;
+    procedure PrepareNewSchema; virtual;
+    property EnableTranslation: Boolean;
+  public
+    procedure AfterConstruction; override;
+    procedure SaveToFile(const AFileName: WideString = ''); override;
+  end;
+
+{ TXMLSchemaTranslator }
+
+  TXMLSchemaTranslator = class(TInterfacedObject, IXMLSchemaTranslator)
+  protected
+    { IXMLSchemaTranslator }
+    procedure Translate(const FileName: WideString; const SchemaDef: IXMLSchemaDef); virtual;
+    { Data member access }
+    property FileName: WideString;
+    property SchemaDef: IXMLSchemaDef;
+  end;
+
+{ TXMLSchemaTranslatorFactory }
+
+  TSchemaTranslatorClass = class of TXMLSchemaTranslator;
+
+  TXMLSchemaTranslatorFactory = class(TInterfacedObject, IXMLSchemaTranslatorFactory)
+  protected
+    { IXMLSchemaTranslatorFactory }
+    function CanExportFile(const FileName: WideString): Boolean; virtual;
+    function CanImportFile(const FileName: WideString): Boolean; virtual;
+    function GetExportTranslator: IXMLSchemaTranslator;
+    function GetImportTranslator: IXMLSchemaTranslator;
+    function GetTranslatorDescription: WideString;
+  public
+    constructor Create(ImportClass, ExportClass: TSchemaTranslatorClass;
+      const Extension, Description: WideString);
+  end;
+
+
+{ Schema Helpers }
+
+function GetXMLSchema(DOMDocument: IDOMDocument): IXMLSchemaDoc;
+function LoadXMLSchema(const FileName: DOMString): IXMLSchemaDoc;
+function LoadXMLSchemaStr(const XML: DOMString): IXMLSchemaDoc;
+function NewXMLSchema(const TargetNamespace: DOMString = '';
+  const TNSPrefix: DOMString = '';
+  const XSDPrefix: DOMString = SXMLSchemaPrefix): IXMLSchemaDoc;
+
+{ Translation }
+
+function FindSchemaExporter(const FileName: string): IXMLSchemaTranslator;
+function FindSchemaImporter(const FileName: string): IXMLSchemaTranslator;
+procedure RegisterSchemaTranslator(const TranslatorFactory: IXMLSchemaTranslatorFactory);
+procedure UnRegisterSchemaTranslator(const TranslatorFactory: IXMLSchemaTranslatorFactory);
+
+{ Utility Routines }
+
+function GetDocumentation(SchemaItem: IXMLSchemaItem; AllEntries: Boolean = False): string;
+procedure SchemaValidationError(const Msg: string; const Args: array of const);
+procedure SchemaParseError(const Msg: string; const Args: array of const);
+function FindItemNS(SchemaItems: TXMLSchemaItems; const Name, ItemNS: DOMString): IXMLSchemaItem;
+
+var
+  TranslatorList: IInterfaceList;
+  XMLSchemaURI: DOMString = SXMLSchemaURI_2001;
+
+implementation

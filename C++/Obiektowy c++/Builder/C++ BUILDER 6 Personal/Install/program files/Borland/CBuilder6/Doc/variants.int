@@ -1,0 +1,279 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Delphi / Kylix Cross-Platform Runtime Library                           }
+{ Variants Unit                                                           }
+{                                                                         }
+{ Copyright (C) 1995-2001 Borland Software Corporation                    }
+{                                                                         }
+{ *********************************************************************** }
+
+unit Variants;
+
+{$RANGECHECKS OFF}
+
+interface
+
+uses
+  Types, SysUtils;
+
+{ Variant support procedures and functions }
+
+function VarType(const V: Variant): TVarType;
+function VarAsType(const V: Variant; AVarType: TVarType): Variant;
+function VarIsType(const V: Variant; AVarType: TVarType): Boolean; overload;
+function VarIsType(const V: Variant; const AVarTypes: array of TVarType): Boolean; overload;
+function VarIsByRef(const V: Variant): Boolean;
+
+function VarIsEmpty(const V: Variant): Boolean;
+procedure VarCheckEmpty(const V: Variant);
+function VarIsNull(const V: Variant): Boolean;
+function VarIsClear(const V: Variant): Boolean;
+
+function VarIsCustom(const V: Variant): Boolean;
+function VarIsOrdinal(const V: Variant): Boolean;
+function VarIsFloat(const V: Variant): Boolean;
+function VarIsNumeric(const V: Variant): Boolean;
+function VarIsStr(const V: Variant): Boolean;
+
+function VarToStr(const V: Variant): string;
+function VarToStrDef(const V: Variant; const ADefault: string): string;
+function VarToWideStr(const V: Variant): WideString;
+function VarToWideStrDef(const V: Variant; const ADefault: WideString): WideString;
+
+function VarToDateTime(const V: Variant): TDateTime;
+function VarFromDateTime(const DateTime: TDateTime): Variant;
+
+function VarInRange(const AValue, AMin, AMax: Variant): Boolean;
+function VarEnsureRange(const AValue, AMin, AMax: Variant): Variant;
+
+type
+  TVariantRelationship = (vrEqual, vrLessThan, vrGreaterThan, vrNotEqual);
+
+function VarSameValue(const A, B: Variant): Boolean;
+function VarCompareValue(const A, B: Variant): TVariantRelationship;
+
+function VarIsEmptyParam(const V: Variant): Boolean;
+
+function VarSupports(const V: Variant; const IID: TGUID; out Intf): Boolean; overload;
+function VarSupports(const V: Variant; const IID: TGUID): Boolean; overload;
+
+{ Variant copy support }
+
+procedure VarCopyNoInd(var Dest: Variant; const Source: Variant);
+
+{ Variant array support procedures and functions }
+
+function VarIsArray(const A: Variant): Boolean; overload;
+function VarIsArray(const A: Variant; AResolveByRef: Boolean): Boolean; overload;
+
+function VarArrayCreate(const Bounds: array of Integer; AVarType: TVarType): Variant;
+function VarArrayOf(const Values: array of Variant): Variant;
+
+function VarArrayRef(const A: Variant): Variant;
+
+function VarTypeIsValidArrayType(const AVarType: TVarType): Boolean;
+function VarTypeIsValidElementType(const AVarType: TVarType): Boolean;
+
+{ The following functions will handle normal variant arrays as well as
+  variant arrays references by another variant using byref }
+
+function VarArrayDimCount(const A: Variant): Integer;
+function VarArrayLowBound(const A: Variant; Dim: Integer): Integer;
+function VarArrayHighBound(const A: Variant; Dim: Integer): Integer;
+
+function VarArrayLock(const A: Variant): Pointer;
+procedure VarArrayUnlock(const A: Variant);
+
+function VarArrayGet(const A: Variant; const Indices: array of Integer): Variant;
+procedure VarArrayPut(var A: Variant; const Value: Variant; const Indices: array of Integer);
+
+{ Variant <--> Dynamic Arrays }
+
+procedure DynArrayToVariant(var V: Variant; const DynArray: Pointer; TypeInfo: Pointer);
+procedure DynArrayFromVariant(var DynArray: Pointer; const V: Variant; TypeInfo: Pointer);
+
+{ Global constants }
+
+function Unassigned: Variant; // Unassigned standard constant
+function Null: Variant;       // Null standard constant
+
+var
+  EmptyParam: OleVariant;    // "Empty parameter" standard constant which can be
+  {$EXTERNALSYM EmptyParam}  // passed as an optional parameter on a dual
+                             // interface.
+
+{ Custom variant base class }
+
+type
+  TVarCompareResult = (crLessThan, crEqual, crGreaterThan);
+  TCustomVariantType = class(TObject, IInterface)
+  protected
+    { IInterface }
+    function QueryInterface(const IID: TGUID; out Obj): HResult; virtual; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+
+    procedure SimplisticClear(var V: TVarData);
+    procedure SimplisticCopy(var Dest: TVarData; const Source: TVarData;
+      const Indirect: Boolean = False);
+
+    procedure RaiseInvalidOp;
+    procedure RaiseCastError;
+    procedure RaiseDispError;
+
+    function LeftPromotion(const V: TVarData; const Operator: TVarOp;
+      out RequiredVarType: TVarType): Boolean; virtual;
+    function RightPromotion(const V: TVarData; const Operator: TVarOp;
+      out RequiredVarType: TVarType): Boolean; virtual;
+    function OlePromotion(const V: TVarData;
+      out RequiredVarType: TVarType): Boolean; virtual;
+    procedure DispInvoke(var Dest: TVarData; const Source: TVarData;
+      CallDesc: PCallDesc; Params: Pointer); virtual;
+
+    procedure VarDataInit(var Dest: TVarData);
+    procedure VarDataClear(var Dest: TVarData);
+
+    procedure VarDataCopy(var Dest: TVarData; const Source: TVarData);
+    procedure VarDataCopyNoInd(var Dest: TVarData; const Source: TVarData);
+
+    procedure VarDataCast(var Dest: TVarData; const Source: TVarData);
+    procedure VarDataCastTo(var Dest: TVarData; const Source: TVarData;
+      const AVarType: TVarType); overload;
+    procedure VarDataCastTo(var Dest: TVarData; const AVarType: TVarType); overload;
+    procedure VarDataCastToOleStr(var Dest: TVarData);
+
+    procedure VarDataFromStr(var V: TVarData; const Value: string);
+    procedure VarDataFromOleStr(var V: TVarData; const Value: WideString);
+    function VarDataToStr(const V: TVarData): string;
+
+    function VarDataIsEmptyParam(const V: TVarData): Boolean;
+    function VarDataIsByRef(const V: TVarData): Boolean;
+    function VarDataIsArray(const V: TVarData): Boolean;
+
+    function VarDataIsOrdinal(const V: TVarData): Boolean;
+    function VarDataIsFloat(const V: TVarData): Boolean;
+    function VarDataIsNumeric(const V: TVarData): Boolean;
+    function VarDataIsStr(const V: TVarData): Boolean;
+  public
+    constructor Create; overload;
+    constructor Create(RequestedVarType: TVarType); overload;
+    destructor Destroy; override;
+    property VarType: TVarType;
+
+    function IsClear(const V: TVarData): Boolean; virtual;
+    procedure Cast(var Dest: TVarData; const Source: TVarData); virtual;
+    procedure CastTo(var Dest: TVarData; const Source: TVarData;
+      const AVarType: TVarType); virtual;
+    procedure CastToOle(var Dest: TVarData; const Source: TVarData); virtual;
+
+    // The following two procedures must be overridden by your custom
+    //  variant type class.  Simplistic versions of Clear and Copy are
+    //  available in the protected section of this class but depending on the
+    //  type of data contained in your custom variant type those functions
+    //  may not handle your situation.
+    procedure Clear(var V: TVarData); virtual; abstract;
+    procedure Copy(var Dest: TVarData; const Source: TVarData;
+      const Indirect: Boolean); virtual; abstract;
+
+    procedure BinaryOp(var Left: TVarData; const Right: TVarData;
+      const Operator: TVarOp); virtual;
+    procedure UnaryOp(var Right: TVarData; const Operator: TVarOp); virtual;
+    function CompareOp(const Left, Right: TVarData;
+      const Operator: TVarOp): Boolean; virtual;
+    procedure Compare(const Left, Right: TVarData;
+      var Relationship: TVarCompareResult); virtual;
+  end;
+  TCustomVariantTypeClass = class of TCustomVariantType;
+
+  TVarDataArray = array of TVarData;
+  IVarInvokeable = interface
+    ['{1CB65C52-BBCB-41A6-9E58-7FB916BEEB2D}']
+    function DoFunction(var Dest: TVarData; const V: TVarData;
+      const Name: string; const Arguments: TVarDataArray): Boolean;
+    function DoProcedure(const V: TVarData; const Name: string;
+      const Arguments: TVarDataArray): Boolean;
+    function GetProperty(var Dest: TVarData; const V: TVarData;
+      const Name: string): Boolean;
+    function SetProperty(const V: TVarData; const Name: string;
+      const Value: TVarData): Boolean;
+  end;
+
+  TInvokeableVariantType = class(TCustomVariantType, IVarInvokeable)
+  protected
+    procedure DispInvoke(var Dest: TVarData; const Source: TVarData;
+      CallDesc: PCallDesc; Params: Pointer); override;
+  public
+    { IVarInvokeable }
+    function DoFunction(var Dest: TVarData; const V: TVarData;
+      const Name: string; const Arguments: TVarDataArray): Boolean; virtual;
+    function DoProcedure(const V: TVarData; const Name: string;
+      const Arguments: TVarDataArray): Boolean; virtual;
+    function GetProperty(var Dest: TVarData; const V: TVarData;
+      const Name: string): Boolean; virtual;
+    function SetProperty(const V: TVarData; const Name: string;
+      const Value: TVarData): Boolean; virtual;
+  end;
+
+  IVarInstanceReference = interface
+    ['{5C176802-3F89-428D-850E-9F54F50C2293}']
+    function GetInstance(const V: TVarData): TObject;
+  end;
+
+  function FindCustomVariantType(const AVarType: TVarType;
+    out CustomVariantType: TCustomVariantType): Boolean; overload;
+  function FindCustomVariantType(const TypeName: string;
+    out CustomVariantType: TCustomVariantType): Boolean; overload;
+
+// Variant Dispatch/Unknown/Corba Any callbacks
+type
+  TAnyProc = procedure (var V: TVarData);
+  TVarDispProc = procedure (Dest: PVariant; const Source: Variant;
+      CallDesc: PCallDesc; Params: Pointer); cdecl;
+
+var
+  VarDispProc: TVarDispProc;
+  ClearAnyProc: TAnyProc;  { Handler clearing a varAny }
+  ChangeAnyProc: TAnyProc; { Handler to change any to variant }
+  RefAnyProc: TAnyProc;    { Handler to add a reference to an varAny }
+
+// Variant control
+var
+
+  // If true then when variants are created we will try to create the smallest
+  //  type possible.  This was true for Delphi v6.1 but now defaults to false.
+  PackVarCreation: Boolean = True;
+
+// exceptions
+type
+  EVariantInvalidOpError = class(EVariantError);
+  EVariantTypeCastError = class(EVariantError);
+
+  EVariantOverflowError = class(EVariantError);
+  EVariantInvalidArgError = class(EVariantError);
+  EVariantBadVarTypeError = class(EVariantError);
+
+  EVariantBadIndexError = class(EVariantError);
+  EVariantArrayLockedError = class(EVariantError);
+  EVariantNotAnArrayError = class(EVariantError);
+  EVariantArrayCreateError = class(EVariantError);
+
+  EVariantNotImplError = class(EVariantError);
+  EVariantOutOfMemoryError = class(EVariantError);
+  EVariantUnexpectedError = class(EVariantError);
+  EVariantDispatchError = class(EVariantError);
+
+// error reporting methods
+procedure VarCastError; overload;
+procedure VarCastError(const ASourceType, ADestType: TVarType); overload;
+procedure VarInvalidOp;
+procedure VarOverflowError(const ASourceType, ADestType: TVarType);
+procedure VarArrayCreateError;
+procedure VarResultCheck(AResult: HRESULT); overload;
+procedure VarResultCheck(AResult: HRESULT; ASourceType, ADestType: TVarType); overload;
+procedure HandleConversionException(const ASourceType, ADestType: TVarType);
+function VarTypeAsText(const AType: TVarType): string; 
+
+// FindVarData will resolve byref variants 
+function FindVarData(const V: Variant): PVarData;
+
+implementation

@@ -1,0 +1,132 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit Buttons;
+
+{$S-,W-,R-,H+,X+}
+{$C PRELOAD}
+
+interface
+
+uses Windows, Messages, Classes, Controls, Forms, Graphics, StdCtrls,
+  ExtCtrls, CommCtrl;
+
+type
+  TButtonLayout = (blGlyphLeft, blGlyphRight, blGlyphTop, blGlyphBottom);
+  TButtonState = (bsUp, bsDisabled, bsDown, bsExclusive);
+  TButtonStyle = (bsAutoDetect, bsWin31, bsNew);
+  TNumGlyphs = 1..4;
+
+  TSpeedButton = class;
+
+  TSpeedButtonActionLink = class(TControlActionLink)
+  protected
+    FClient: TSpeedButton;
+    procedure AssignClient(AClient: TObject); override;
+    function IsCheckedLinked: Boolean; override;
+    function IsGroupIndexLinked: Boolean; override;
+    procedure SetGroupIndex(Value: Integer); override;
+    procedure SetChecked(Value: Boolean); override;
+  end;
+
+  TSpeedButton = class(TGraphicControl)
+  protected
+    FState: TButtonState;
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); override;
+    function GetActionLinkClass: TControlActionLinkClass; override;
+    function GetPalette: HPALETTE; override;
+    procedure Loaded; override;
+    procedure MouseDown(Button: TMouseButton; Shift: TShiftState;
+      X, Y: Integer); override;
+    procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState;
+      X, Y: Integer); override;
+    procedure Paint; override;
+    property MouseInControl: Boolean;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Click; override;
+  published
+    property Action;
+    property AllowAllUp: Boolean default False;
+    property Anchors;
+    property BiDiMode;
+    property Constraints;
+    property GroupIndex: Integer default 0;
+    property Down: Boolean default False;
+    property Caption;
+    property Enabled;
+    property Flat: Boolean default False;
+    property Font;
+    property Glyph: TBitmap;
+    property Layout: TButtonLayout default blGlyphLeft;
+    property Margin: Integer default -1;
+    property NumGlyphs: TNumGlyphs default 1;
+    property ParentFont;
+    property ParentShowHint;
+    property ParentBiDiMode;
+    property PopupMenu;
+    property ShowHint;
+    property Spacing: Integer default 4;
+    property Transparent: Boolean default True;
+    property Visible;
+    property OnClick;
+    property OnDblClick;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+  end;
+    
+  TBitBtnKind = (bkCustom, bkOK, bkCancel, bkHelp, bkYes, bkNo, bkClose,
+    bkAbort, bkRetry, bkIgnore, bkAll);
+    
+  TBitBtn = class(TButton)
+  protected
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); override;
+    procedure CreateHandle; override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    function GetPalette: HPALETTE; override;
+    procedure SetButtonStyle(ADefault: Boolean); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Click; override;
+  published
+    property Action;
+    property Anchors;
+    property BiDiMode;
+    property Cancel stored IsCustom;
+    property Caption stored IsCustomCaption;
+    property Constraints;
+    property Default stored IsCustom;
+    property Enabled;
+    property Glyph: TBitmap;
+    property Kind: TBitBtnKind default bkCustom;
+    property Layout: TButtonLayout default blGlyphLeft;
+    property Margin: Integer default -1;
+    property ModalResult stored IsCustom;
+    property NumGlyphs: TNumGlyphs default 1;
+    property ParentShowHint;
+    property ParentBiDiMode;
+    property ShowHint;
+    property Style: TButtonStyle default bsAutoDetect;
+    property Spacing: Integer default 4;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnEnter;
+    property OnExit;
+  end;
+    
+function DrawButtonFace(Canvas: TCanvas; const Client: TRect;
+  BevelWidth: Integer; Style: TButtonStyle; IsRounded, IsDown,
+  IsFocused: Boolean): TRect;
+    
+implementation

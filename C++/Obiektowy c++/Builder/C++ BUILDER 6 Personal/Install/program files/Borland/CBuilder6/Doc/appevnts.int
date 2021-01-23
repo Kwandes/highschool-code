@@ -1,0 +1,57 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit AppEvnts;
+
+interface
+
+uses Windows, Messages, SysUtils, Classes, Forms, ActnList;
+
+type
+  TCustomApplicationEvents = class(TComponent)
+  protected
+    property OnActionExecute: TActionEvent;
+    property OnActionUpdate: TActionEvent;
+    property OnActivate: TNotifyEvent;
+    property OnDeactivate: TNotifyEvent;
+    property OnException: TExceptionEvent;
+    property OnIdle: TIdleEvent;
+    property OnHelp: THelpEvent;
+    property OnHint: TNotifyEvent;
+    property OnMessage: TMessageEvent;
+    property OnMinimize: TNotifyEvent;
+    property OnRestore: TNotifyEvent;
+    property OnShowHint: TShowHintEvent;
+    property OnShortCut: TShortCutEvent;
+    property OnSettingChange: TSettingChangeEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure Activate;
+    procedure CancelDispatch;
+  end;
+
+  TApplicationEvents = class(TCustomApplicationEvents)
+  published
+    property OnActionExecute;
+    property OnActionUpdate;
+    property OnActivate;
+    property OnDeactivate;
+    property OnException;
+    property OnIdle;
+    property OnHelp;
+    property OnHint;
+    property OnMessage;
+    property OnMinimize;
+    property OnRestore;
+    property OnShowHint;
+    property OnShortCut;
+    property OnSettingChange;
+  end;
+
+implementation

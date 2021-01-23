@@ -1,0 +1,332 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit FileCtrl platform;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses Windows, Messages, SysUtils, Classes, Controls, Graphics, Forms,
+  Menus, StdCtrls, Buttons;
+
+type
+  TFileAttr = (ftReadOnly, ftHidden, ftSystem, ftVolumeID, ftDirectory,
+    ftArchive, ftNormal);
+  TFileType = set of TFileAttr;
+
+  TDriveType = (dtUnknown, dtNoDrive, dtFloppy, dtFixed, dtNetwork, dtCDROM,
+    dtRAM);
+
+  TDirectoryListBox = class;
+  TFilterComboBox = class;
+  TDriveComboBox = class;
+
+{ TFileListBox }
+
+  TFileListBox = class(TCustomListBox)
+  protected
+    FDirectory: string;
+    FMask: string;
+    FFileType: TFileType;
+    FFileEdit: TEdit;
+    FDirList: TDirectoryListBox;
+    FFilterCombo: TFilterComboBox;
+    ExeBMP, DirBMP, UnknownBMP: TBitmap;
+    FOnChange: TNotifyEvent;
+    FLastSel: Integer;
+    FShowGlyphs: Boolean;
+    procedure CreateWnd; override;
+    procedure ReadBitmaps; virtual;
+    procedure Click; override;
+    procedure Change; virtual;
+    procedure ReadFileNames; virtual;
+    procedure DrawItem(Index: Integer; Rect: TRect; State: TOwnerDrawState);  override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    function GetFilePath: string; virtual;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Update; reintroduce;
+    procedure ApplyFilePath (const EditText: string); virtual;
+    property Drive: char;
+    property Directory: string;
+    property FileName: string;
+  published
+    property Align;
+    property Anchors;
+    property AutoComplete;
+    property BevelEdges;
+    property BevelInner;
+    property BevelKind;
+    property BevelOuter;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DragCursor;
+    property DragMode;
+    property Enabled;
+    property ExtendedSelect;
+    property FileEdit: TEdit;
+    property FileType: TFileType default [ftNormal];
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property IntegralHeight;
+    property ItemHeight;
+    property Mask: string;
+    property MultiSelect;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowGlyphs: Boolean default False;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnChange: TNotifyEvent;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDrag;
+  end;
+
+{ TDirectoryListBox }
+
+  TDirectoryListBox = class(TCustomListBox)
+  protected
+    ClosedBMP, OpenedBMP, CurrentBMP: TBitmap;
+    FDirectory: string;
+    FOnChange: TNotifyEvent;
+    procedure Change; virtual;
+    procedure DblClick; override;
+    procedure ReadBitmaps; virtual;
+    procedure CreateWnd; override;
+    procedure DrawItem(Index: Integer; Rect: TRect; State: TOwnerDrawState); override;
+    function  ReadDirectoryNames(const ParentDirectory: string;
+      DirectoryList: TStringList): Integer;
+    procedure BuildList; virtual;
+    procedure KeyPress(var Key: Char); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function  DisplayCase(const S: String): String;
+    function  FileCompareText(const A, B: String): Integer;
+    function GetItemPath(Index: Integer): string;
+    procedure OpenCurrent;
+    procedure Update; reintroduce;
+    property Drive: Char;
+    property Directory: string;
+    property PreserveCase: Boolean;
+    property CaseSensitive: Boolean;
+  published
+    property Align;
+    property Anchors;
+    property AutoComplete;
+    property BevelEdges;
+    property BevelInner;
+    property BevelKind;
+    property BevelOuter;
+    property Color;
+    property Columns;
+    property Constraints;
+    property Ctl3D;
+    property DirLabel: TLabel;
+    property DragCursor;
+    property DragMode;
+    property Enabled;
+    property FileList: TFileListBox;
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property IntegralHeight;
+    property ItemHeight;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnChange: TNotifyEvent;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnMouseDown;
+    property OnMouseMove;
+    property OnMouseUp;
+    property OnStartDrag;
+  end;
+
+{ TDriveComboBox }
+
+  TTextCase = (tcLowerCase, tcUpperCase);
+
+  TDriveComboBox = class(TCustomComboBox)
+  protected
+    FloppyBMP, FixedBMP, NetworkBMP, CDROMBMP, RAMBMP: TBitmap;
+    procedure CreateWnd; override;
+    procedure DrawItem(Index: Integer; Rect: TRect; State: TOwnerDrawState); override;
+    procedure Click; override;
+    procedure BuildList; virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property Text;
+    property Drive: Char;
+  published
+    property Anchors;
+    property AutoComplete;
+    property AutoDropDown;
+    property BevelEdges;
+    property BevelInner;
+    property BevelKind;
+    property BevelOuter;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DirList: TDirectoryListBox;
+    property DragMode;
+    property DragCursor;
+    property Enabled;
+    property Font;
+    property ImeMode;
+    property ImeName;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property TextCase: TTextCase default tcLowerCase;
+    property Visible;
+    property OnChange;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDropDown;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnStartDrag;
+  end;
+
+{ TFilterComboBox }
+
+  TFilterComboBox = class(TCustomComboBox)
+  protected
+    procedure Change; override;
+    procedure CreateWnd; override;
+    procedure Click; override;
+    procedure BuildList;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    property Mask: string;
+    property Text;
+  published
+    property Anchors;
+    property AutoComplete;
+    property AutoDropDown;    
+    property BevelEdges;
+    property BevelInner;
+    property BevelKind;
+    property BevelOuter;
+    property Color;
+    property Constraints;
+    property Ctl3D;
+    property DragMode;
+    property DragCursor;
+    property Enabled;
+    property FileList: TFileListBox;
+    property Filter: string;
+    property Font;
+    property ImeName;
+    property ImeMode;
+    property ParentColor;
+    property ParentCtl3D;
+    property ParentFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop;
+    property Visible;
+    property OnChange;
+    property OnClick;
+    property OnContextPopup;
+    property OnDblClick;
+    property OnDragDrop;
+    property OnDragOver;
+    property OnDropDown;
+    property OnEndDrag;
+    property OnEnter;
+    property OnExit;
+    property OnKeyDown;
+    property OnKeyPress;
+    property OnKeyUp;
+    property OnStartDrag;
+  end;
+
+procedure ProcessPath (const EditText: string; var Drive: Char;
+  var DirPart: string; var FilePart: string);
+
+function MinimizeName(const Filename: TFileName; Canvas: TCanvas;
+  MaxLen: Integer): TFileName;
+
+const
+  WNTYPE_DRIVE = 1;  { from WINNET.H, WFW 3.1 SDK }
+
+type
+  TSelectDirOpt = (sdAllowCreate, sdPerformCreate, sdPrompt);
+  TSelectDirOpts = set of TSelectDirOpt;
+
+function SelectDirectory(var Directory: string;
+  Options: TSelectDirOpts; HelpCtx: Longint): Boolean; overload;
+function SelectDirectory(const Caption: string; const Root: WideString;
+  var Directory: string): Boolean; overload;
+function DirectoryExists(const Name: string): Boolean;
+{$EXTERNALSYM DirectoryExists}
+function ForceDirectories(const Dir: string): Boolean;
+{$EXTERNALSYM ForceDirectories}
+
+implementation

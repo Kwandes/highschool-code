@@ -1,0 +1,104 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Kylix and Delphi Cross-Platform Visual Component Library                    }
+{                                                                             }
+{ Copyright (c) 1995, 2001 Borland Software Corporation                       }
+{                                                                             }
+{ *************************************************************************** }
+
+
+unit FMTBcd;
+
+interface
+
+uses SysUtils, Variants;
+
+const
+
+  MaxStringDigits = 100;
+  _NoDecimal = -255;
+  _DefaultDecimals = 10;
+
+  { From DB.pas }
+  { Max supported by Midas }
+  MaxFMTBcdFractionSize = 64;
+  { Max supported by Midas }
+  MaxFMTBcdDigits =   32;
+  DefaultFMTBcdScale = 6;
+  MaxBcdPrecision =   18;
+  MaxBcdScale     =   4;
+
+type
+
+  PBcd = ^TBcd;
+  TBcd  = packed record
+    Precision: Byte;                        { 1..64 }
+    SignSpecialPlaces: Byte;                { Sign:1, Special:1, Places:6 }
+    Fraction: packed array [0..31] of Byte; { BCD Nibbles, 00..99 per Byte, high Nibble 1st }
+  end;
+
+{ Exception classes }
+
+  EBcdException = class(Exception);
+  EBcdOverflowException = class(EBcdException);
+
+{ Utility functions for TBcd access }
+
+function BcdPrecision(const Bcd: TBcd): Word;
+function BcdScale(const Bcd: TBcd): Word;
+function IsBcdNegative(const Bcd: TBcd): Boolean;
+
+{ Bcd Arithmetic}
+
+procedure BcdAdd(const bcdIn1, bcdIn2: TBcd; var bcdOut: TBcd);
+procedure BcdSubtract(const bcdIn1, bcdIn2: TBcd; var bcdOut: TBcd);
+{ Returns True if successful, False if Int Digits needed to be truncated }
+function NormalizeBcd(const InBcd: TBcd; var OutBcd: TBcd; const Prec, Scale: Word): Boolean;
+
+procedure BcdMultiply(const bcdIn1, bcdIn2: TBcd; var bcdOut: TBcd); overload;
+procedure BcdMultiply(const bcdIn: TBcd; const DoubleIn: Double; var bcdOut: TBcd); overload;
+procedure BcdMultiply(const bcdIn: TBcd; const StringIn: string; var bcdOut: TBcd); overload;
+procedure BcdMultiply(StringIn1, StringIn2: string; var bcdOut: TBcd); overload;
+procedure BcdDivide(Dividend, Divisor: string; var bcdOut: TBcd); overload;
+procedure BcdDivide(const Dividend, Divisor: TBcd; var bcdOut: TBcd); overload;
+procedure BcdDivide(const Dividend: TBcd; const Divisor: Double; var bcdOut: TBcd); overload;
+procedure BcdDivide(const Dividend: TBcd; const Divisor: string; var bcdOut: TBcd); overload;
+
+{ TBcd variant creation utils }
+procedure VarFMTBcdCreate(var ADest: Variant; const ABcd: TBcd); overload;
+function VarFMTBcdCreate: Variant; overload;
+function VarFMTBcdCreate(const AValue: string; Precision, Scale: Word): Variant; overload;
+function VarFMTBcdCreate(const AValue: Double; Precision: Word = 18; Scale: Word = 4): Variant; overload;
+function VarFMTBcdCreate(const ABcd: TBcd): Variant; overload;
+function VarIsFMTBcd(const AValue: Variant): Boolean; overload;
+function VarFMTBcd: TVarType;
+
+{ Convert String/Double/Integer to BCD struct }
+function StrToBcd(const AValue: string): TBcd; 
+function TryStrToBcd(const AValue: string; var Bcd: TBcd): Boolean;
+function DoubleToBcd(const AValue: Double): TBcd; overload;
+procedure DoubleToBcd(const AValue: Double; var bcd: TBcd); overload;
+function IntegerToBcd(const AValue: Integer): TBcd;
+function VarToBcd(const AValue: Variant): TBcd;
+
+{ From DB.pas }
+function CurrToBCD(const Curr: Currency; var BCD: TBcd; Precision: Integer = 32;
+  Decimals: Integer = 4): Boolean;
+
+{ Convert Bcd struct to string/Double/Integer }
+function BcdToStr(const Bcd: TBcd): string; overload;
+function BcdToDouble(const Bcd: TBcd): Double;
+function BcdToInteger(const Bcd: TBcd; Truncate: Boolean = False): Integer;
+
+{ From DB.pas }
+function BCDToCurr(const BCD: TBcd; var Curr: Currency): Boolean;
+{ Formatting Bcd as string }
+function BcdToStrF(const Bcd: TBcd; Format: TFloatFormat; const Precision, Digits: Integer): string;
+function FormatBcd(const Format: string; Bcd: TBcd): string;
+function BcdCompare(const bcd1, bcd2: TBcd): Integer;
+
+const
+
+  NullBcd: TBcd = (Precision: 0; SignSpecialPlaces: 0; Fraction: (0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0));
+
+implementation

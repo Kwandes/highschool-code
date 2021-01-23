@@ -1,0 +1,99 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+{ This unit defines the TTabbedNotebook Component. }
+
+unit TabNotBk;
+
+{$H+,X+}
+
+interface
+
+uses Windows, Classes,  StdCtrls, Forms, Messages, Graphics, Controls,
+  ComCtrls;
+
+const
+  CM_TABFONTCHANGED = CM_BASE + 100;
+
+type
+
+  TPageChangeEvent = procedure(Sender: TObject; NewTab: Integer;
+    var AllowChange: Boolean) of object;
+
+  { Class       : TTabPage
+    Description : This class implements the individual tab page behavior.
+                  Each instance of this class will hold controls to be
+                  displayed when it is the active page of a TTabbedNotebook
+                  component. }
+  TTabPage = class(TWinControl)
+  protected
+    procedure ReadState(Reader: TReader); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property Caption;
+    property Height stored False;
+    property TabOrder stored False;
+    property Visible stored False;
+    property Width stored False;
+    property Enabled stored False;
+  end;
+
+  { Class       : TTabbedNotebook
+    Description : This class implements Tabbed notebook component.
+                  It holds a collection of TTabPages onto which
+                  users can drop controls.  It uses MS-Word style
+                  tab buttons to allow the user to control which
+                  page is currently active. }
+  TTabbedNotebook = class(TCustomTabControl)
+  protected
+    procedure AlignControls(AControl: TControl; var Rect: TRect); override;
+    procedure Change; override;
+    procedure Click; override;
+    procedure CreateHandle; override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    function GetChildOwner: TComponent; override;
+    procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
+    procedure Loaded; override;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure ReadState(Reader: TReader); override;
+    procedure SetPageIndex(Value: Integer);
+    procedure ShowControl(AControl: TControl); override;
+    procedure CMTabFontChanged(var Message: TMessage); message CM_TABFONTCHANGED;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor  Destroy; override;
+    function GetIndexForPage(const PageName: string): Integer;
+    property TopFont: TFont;
+    procedure TabFontChanged(Sender: TObject);
+  published
+    property ActivePage: string;
+    property Align;
+    property Anchors;
+    property Constraints;
+    property Enabled;
+    property PageIndex: Integer default 0;
+    property Pages: TStrings;
+    property Font;
+    property TabsPerRow: Integer default 3;
+    property TabFont: TFont;
+    property ParentShowHint;
+    property PopupMenu;
+    property ShowHint;
+    property TabOrder;
+    property TabStop default True;
+    property Visible;
+    property OnClick: TNotifyEvent;
+    property OnChange: TPageChangeEvent;
+    property OnContextPopup;
+    property OnEnter;
+    property OnExit;
+  end;
+
+implementation

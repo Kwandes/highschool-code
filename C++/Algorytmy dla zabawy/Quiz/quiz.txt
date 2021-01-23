@@ -1,0 +1,22 @@
+0x28fde0
+////////Question////////
+final version
+A:hopefully
+B:ofc not
+C:we will add more
+D:42
+Proper answer: D
+////////Question////////
+maybe now?
+A:1
+B:2
+C:3
+D:42
+Proper answer: d
+////////Question////////
+this should be it
+A:no
+B:yes
+C:fuck you
+D:I HATE LIFE WTF IS THIS HJDSFHDSJKHFKSDJ HFJKSDHF OMG END THIS SHIT WOW
+Proper answer: B

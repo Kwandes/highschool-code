@@ -1,0 +1,274 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit Dialogs;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses Windows, Messages, SysUtils, CommDlg, Classes, Graphics, Controls,
+  Forms, StdCtrls, Printers;
+
+const
+
+{ Maximum number of custom colors in color dialog }
+
+  MaxCustomColors = 16;
+
+type
+
+{ TCommonDialog }
+
+  TCommonDialog = class(TComponent)
+  protected
+    procedure DoClose; dynamic;
+    procedure DoShow; dynamic;
+    procedure WndProc(var Message: TMessage); virtual;
+    function MessageHook(var Msg: TMessage): Boolean; virtual;
+    function TaskModalDialog(DialogFunc: Pointer; var DialogData): Bool; virtual;
+    property Template: PChar;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function Execute: Boolean; virtual; abstract;
+    procedure DefaultHandler(var Message); override;
+    property Handle: HWnd;
+  published
+    property Ctl3D: Boolean default True;
+    property HelpContext: THelpContext default 0;
+    property OnClose: TNotifyEvent;
+    property OnShow: TNotifyEvent;
+  end;
+
+{ TOpenDialog }
+
+  TOpenOption = (ofReadOnly, ofOverwritePrompt, ofHideReadOnly,
+    ofNoChangeDir, ofShowHelp, ofNoValidate, ofAllowMultiSelect,
+    ofExtensionDifferent, ofPathMustExist, ofFileMustExist, ofCreatePrompt,
+    ofShareAware, ofNoReadOnlyReturn, ofNoTestFileCreate, ofNoNetworkButton,
+    ofNoLongNames, ofOldStyleDialog, ofNoDereferenceLinks, ofEnableIncludeNotify,
+    ofEnableSizing, ofDontAddToRecent, ofForceShowHidden);
+  TOpenOptions = set of TOpenOption;
+
+  TOpenOptionEx = (ofExNoPlacesBar);
+  TOpenOptionsEx = set of TOpenOptionEx;
+
+  TFileEditStyle = (fsEdit, fsComboBox);
+  TOFNotifyEx = type CommDlg.TOFNotifyEx;
+  {$NODEFINE TOFNotifyEx}
+  TIncludeItemEvent = procedure (const OFN: TOFNotifyEx; var Include: Boolean) of object;
+
+  TOpenDialog = class(TCommonDialog)
+  protected
+    function CanClose(var OpenFileName: TOpenFileName): Boolean;
+    function DoCanClose: Boolean; dynamic;
+    function DoExecute(Func: Pointer): Bool;
+    procedure DoSelectionChange; dynamic;
+    procedure DoFolderChange; dynamic;
+    procedure DoTypeChange; dynamic;
+    procedure DoIncludeItem(const OFN: TOFNotifyEx; var Include: Boolean); dynamic;
+    procedure DefineProperties(Filer: TFiler); override;
+    procedure GetFileNames(var OpenFileName: TOpenFileName);
+    function GetStaticRect: TRect; virtual;
+    procedure WndProc(var Message: TMessage); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function Execute: Boolean; override;
+    property FileEditStyle: TFileEditStyle;
+    property Files: TStrings;
+    property HistoryList: TStrings;
+  published
+    property DefaultExt: string;
+    property FileName: TFileName;
+    property Filter: string;
+    property FilterIndex: Integer default 1;
+    property InitialDir: string;
+    property Options: TOpenOptions default [ofHideReadOnly, ofEnableSizing];
+    property OptionsEx: TOpenOptionsEx default [];
+    property Title: string;
+    property OnCanClose: TCloseQueryEvent;
+    property OnFolderChange: TNotifyEvent;
+    property OnSelectionChange: TNotifyEvent;
+    property OnTypeChange: TNotifyEvent;
+    property OnIncludeItem: TIncludeItemEvent;
+  end;
+
+{ TSaveDialog }
+
+  TSaveDialog = class(TOpenDialog)
+    function Execute: Boolean; override;
+  end;
+
+{ TColorDialog }
+
+  TColorDialogOption = (cdFullOpen, cdPreventFullOpen, cdShowHelp,
+    cdSolidColor, cdAnyColor);
+  TColorDialogOptions = set of TColorDialogOption;
+
+  TCustomColors = array[0..MaxCustomColors - 1] of Longint;
+
+  TColorDialog = class(TCommonDialog)
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function Execute: Boolean; override;
+  published
+    property Color: TColor default clBlack;
+    property Ctl3D default False;
+    property CustomColors: TStrings;
+    property Options: TColorDialogOptions default [];
+  end;
+
+{ TFontDialog }
+
+  TFontDialogOption = (fdAnsiOnly, fdTrueTypeOnly, fdEffects,
+    fdFixedPitchOnly, fdForceFontExist, fdNoFaceSel, fdNoOEMFonts,
+    fdNoSimulations, fdNoSizeSel, fdNoStyleSel,  fdNoVectorFonts,
+    fdShowHelp, fdWysiwyg, fdLimitSize, fdScalableOnly, fdApplyButton);
+  TFontDialogOptions = set of TFontDialogOption;
+
+  TFontDialogDevice = (fdScreen, fdPrinter, fdBoth);
+
+  TFDApplyEvent = procedure(Sender: TObject; Wnd: HWND) of object;
+
+  TFontDialog = class(TCommonDialog)
+  protected
+    procedure Apply(Wnd: HWND); dynamic;
+    procedure WndProc(var Message: TMessage); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function Execute: Boolean; override;
+  published
+    property Font: TFont;
+    property Device: TFontDialogDevice default fdScreen;
+    property MinFontSize: Integer;
+    property MaxFontSize: Integer;
+    property Options: TFontDialogOptions default [fdEffects];
+    property OnApply: TFDApplyEvent;
+  end;
+
+{ TPrinterSetupDialog }
+
+  TPrinterSetupDialog = class(TCommonDialog)
+  public
+    function Execute: Boolean; override;
+  end;
+
+{ TPrintDialog }
+
+  TPrintRange = (prAllPages, prSelection, prPageNums);
+  TPrintDialogOption = (poPrintToFile, poPageNums, poSelection, poWarning,
+    poHelp, poDisablePrintToFile);
+  TPrintDialogOptions = set of TPrintDialogOption;
+
+  TPrintDialog = class(TCommonDialog)
+  public
+    function Execute: Boolean; override;
+  published
+    property Collate: Boolean default False;
+    property Copies: Integer default 0;
+    property FromPage: Integer default 0;
+    property MinPage: Integer default 0;
+    property MaxPage: Integer default 0;
+    property Options: TPrintDialogOptions default [];
+    property PrintToFile: Boolean default False;
+    property PrintRange: TPrintRange default prAllPages;
+    property ToPage: Integer default 0;
+  end;
+
+{ TFindDialog }
+
+  TFindOption = (frDown, frFindNext, frHideMatchCase, frHideWholeWord,
+    frHideUpDown, frMatchCase, frDisableMatchCase, frDisableUpDown,
+    frDisableWholeWord, frReplace, frReplaceAll, frWholeWord, frShowHelp);
+  TFindOptions = set of TFindOption;
+
+  TFindReplaceFunc = function(var FindReplace: TFindReplace): HWnd stdcall;
+
+  TFindDialog = class(TCommonDialog)
+  protected
+    function MessageHook(var Msg: TMessage): Boolean; override;
+    procedure Find; dynamic;
+    procedure Replace; dynamic;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure CloseDialog;
+    function Execute: Boolean; override;
+    property Left: Integer;
+    property Position: TPoint;
+    property Top: Integer;
+  published
+    property FindText: string;
+    property Options: TFindOptions default [frDown];
+    property OnFind: TNotifyEvent;
+  end;
+
+{ TReplaceDialog }
+
+  TReplaceDialog = class(TFindDialog)
+  public
+    constructor Create(AOwner: TComponent); override;
+  published
+    property ReplaceText;
+    property OnReplace;
+  end;
+
+{ Message dialog }
+
+type
+  TMsgDlgType = (mtWarning, mtError, mtInformation, mtConfirmation, mtCustom);
+  TMsgDlgBtn = (mbYes, mbNo, mbOK, mbCancel, mbAbort, mbRetry, mbIgnore,
+    mbAll, mbNoToAll, mbYesToAll, mbHelp);
+  TMsgDlgButtons = set of TMsgDlgBtn;
+
+const
+  mbYesNoCancel = [mbYes, mbNo, mbCancel];
+  mbYesAllNoAllCancel = [mbYes, mbYesToAll, mbNo, mbNoToAll, mbCancel];
+  mbOKCancel = [mbOK, mbCancel];
+  mbAbortRetryIgnore = [mbAbort, mbRetry, mbIgnore];
+  mbAbortIgnore = [mbAbort, mbIgnore];
+
+function CreateMessageDialog(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons): TForm;
+
+function MessageDlg(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint): Integer;
+function MessageDlgPos(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint; X, Y: Integer): Integer;
+function MessageDlgPosHelp(const Msg: string; DlgType: TMsgDlgType;
+  Buttons: TMsgDlgButtons; HelpCtx: Longint; X, Y: Integer;
+  const HelpFileName: string): Integer;
+
+procedure ShowMessage(const Msg: string);
+procedure ShowMessageFmt(const Msg: string; Params: array of const);
+procedure ShowMessagePos(const Msg: string; X, Y: Integer);
+
+{ Input dialog }
+
+function InputBox(const ACaption, APrompt, ADefault: string): string;
+function InputQuery(const ACaption, APrompt: string;
+  var Value: string): Boolean;
+
+function PromptForFileName(var AFileName: string; const AFilter: string = '';
+  const ADefaultExt: string = ''; const ATitle: string = '';
+  const AInitialDir: string = ''; SaveDialog: Boolean = False): Boolean;
+
+{ Win98 and Win2k will default to the "My Documents" folder if the InitialDir
+  property is empty and no files of the filtered type are contained in the
+  current directory. Set this flag to True to force TOpenDialog and descendents
+  to always open in the current directory when InitialDir is empty. (Same
+  behavior as setting InitialDir to '.') }
+var
+  ForceCurrentDirectory: Boolean = False;
+
+implementation

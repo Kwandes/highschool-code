@@ -1,0 +1,120 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Kylix and Delphi Cross-Platform Visual Component Library                    }
+{                                                                             }
+{ Copyright (c) 1997, 2001 Borland Software Corporation                       }
+{                                                                             }
+{ *************************************************************************** }
+
+
+unit DBLocal;
+
+{$R-,T-,H+,X+}
+
+interface
+
+{$IFDEF MSWINDOWS}
+uses Windows, SysUtils, Variants, Classes, DB, DBCommon, Midas, SqlTimSt, DBClient, Provider;
+{$ENDIF}
+{$IFDEF LINUX}
+uses Libc, SysUtils, Variants, Classes, DB, DBCommon, Midas, SqlTimSt, DBClient, Provider;
+{$ENDIF}
+
+type
+
+  TSqlDBType = (typeDBX, typeBDE, typeADO, typeIBX);
+
+{ TCustomCachedDataSet }
+
+  TCustomCachedDataSet = class(TCustomClientDataSet)
+  protected
+    procedure CloseCursor; override;
+    function GetCommandText: string; virtual;
+    function GetOptions: TProviderOptions;
+    function GetUpdateMode: TUpdateMode;
+    procedure SetActive(Value: Boolean); override;
+    procedure SetAggregates(Value: TAggregates); override;
+    procedure SetCommandText(Value: string); override;
+    procedure SetOptions(Value: TProviderOptions);
+    procedure SetUpdateMode(Value: TUpdateMode);
+    property Provider: TDataSetProvider;
+    property SqlDBType: TSqlDBType;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure LoadFromFile(const AFileName: string = '');
+  published
+    { overridden by TCustomCachedDataSet descendants }
+    property Active;
+    property CommandText;
+    { public in TClientDataSet }
+    property Aggregates;
+    property AggregatesActive;
+    property AutoCalcFields;
+    property Constraints stored ConstraintsStored;
+    property DisableStringTrim;
+    property FetchOnDemand;
+    property FieldDefs;
+    property FileName;
+    property Filter;
+    property Filtered;
+    property FilterOptions;
+    property IndexDefs;
+    property IndexFieldNames;
+    property IndexName;
+    property MasterFields;
+    property MasterSource;
+    { from TDataSetProvider }
+    property Options: TProviderOptions default [];
+    { more public in TClientDataSet }
+    property ObjectView;
+    property PacketRecords;
+    property Params;
+    property ReadOnly;
+    { from TDataSetProvider again}
+    property UpdateMode: TUpdateMode default upWhereAll;
+    { TClientDataSet events }
+    property BeforeOpen;
+    property AfterOpen;
+    property BeforeClose;
+    property AfterClose;
+    property BeforeInsert;
+    property AfterInsert;
+    property BeforeEdit;
+    property AfterEdit;
+    property BeforePost;
+    property AfterPost;
+    property BeforeCancel;
+    property AfterCancel;
+    property BeforeDelete;
+    property AfterDelete;
+    property BeforeScroll;
+    property AfterScroll;
+    property BeforeRefresh;
+    property AfterRefresh;
+    property OnCalcFields;
+    property OnDeleteError;
+    property OnEditError;
+    property OnFilterRecord;
+    property OnNewRecord;
+    property OnPostError;
+    property OnReconcileError;
+    property BeforeApplyUpdates;
+    property AfterApplyUpdates;
+    property BeforeGetRecords;
+    property AfterGetRecords;
+    property BeforeRowRequest;
+    property AfterRowRequest;
+    property BeforeExecute;
+    property AfterExecute;
+    property BeforeGetParams;
+    property AfterGetParams;
+    { TDataSetProvider events }
+    property BeforeUpdateRecord: TBeforeUpdateRecordEvent;
+    property AfterUpdateRecord: TAfterUpdateRecordEvent;
+    property OnGetTableName: TGetTableNameEvent;
+    property OnUpdateData: TProviderDataEvent;
+    property OnUpdateError: TResolverErrorEvent;
+  end;
+
+implementation

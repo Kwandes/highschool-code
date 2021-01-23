@@ -1,0 +1,15 @@
+# depslib dependency file v1.0
+1484506852 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\palindrome\main.cpp
+	<iostream>
+	<conio.h>
+	<windows.h>
+	<cstdio>
+
+1484431473 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\palindrome\quick_test.cpp
+	<iostream>
+	<conio.h>
+
+1484527197 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\palindrome\palindrome.cpp
+	<iostream>
+	<iomanip>
+

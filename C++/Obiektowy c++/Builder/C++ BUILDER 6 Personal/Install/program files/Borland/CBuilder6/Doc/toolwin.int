@@ -1,0 +1,70 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit ToolWin;
+
+{$R-,H+,X+}
+
+interface
+
+uses Windows, Messages, Classes, Controls, Forms;
+
+type
+
+{ TToolWindow }
+
+  TEdgeBorder = (ebLeft, ebTop, ebRight, ebBottom);
+  TEdgeBorders = set of TEdgeBorder;
+
+  TEdgeStyle = (esNone, esRaised, esLowered);
+
+  TToolWindow = class(TWinControl)
+  protected
+    procedure NCPaint(DC: HDC); virtual;
+    procedure WMNCCalcSize(var Message: TWMNCCalcSize); message WM_NCCALCSIZE;
+    procedure WMNCPaint(var Message: TMessage); message WM_NCPAINT;
+    procedure CMBorderChanged(var Message: TMessage); message CM_BORDERCHANGED;
+    procedure CMCtl3DChanged(var Message: TMessage); message CM_CTL3DCHANGED;
+  public
+    constructor Create(AOwner: TComponent); override;
+    property EdgeBorders: TEdgeBorders default [ebLeft, ebTop, ebRight, ebBottom];
+    property EdgeInner: TEdgeStyle default esRaised;
+    property EdgeOuter: TEdgeStyle default esLowered;
+  end;
+
+{ TToolDragDockObject }
+
+  TToolDockObject = class(TDragDockObject)
+  protected
+    procedure AdjustDockRect(ARect: TRect); override;
+    procedure DrawDragDockImage; override;
+    procedure EraseDragDockImage; override;
+  public
+    constructor Create(AControl: TControl); override;
+  end;
+
+{ TToolDockForm }
+
+  TSizingOrientation = (soNone, soHorizontal, soVertical);
+
+  TToolDockForm = class(TCustomDockForm)
+  protected
+    function CanResize(var NewWidth, NewHeight: Integer): Boolean; override;
+    procedure CreateParams(var Params: TCreateParams); override;
+    procedure DoAddDockClient(Client: TControl; const ARect: TRect); override;
+    procedure WMNCCreate(var Message: TWMNCCreate); message WM_NCCREATE;
+    procedure WMNCHitTest(var Message: TWMNCHitTest); message WM_NCHITTEST;
+    procedure WMNCLButtonDown(var Message: TWMNCLButtonDown); message WM_NCLBUTTONDOWN;
+    procedure WMSize(var Message: TWMSize); message WM_SIZE;
+    procedure WMSysCommand(var Message: TWMSysCommand); message WM_SYSCOMMAND;
+  public
+    constructor Create(AOwner: TComponent); override;
+  end;
+
+implementation

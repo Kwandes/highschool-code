@@ -1,0 +1,66 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Delphi Runtime Library                                                  }
+{                                                                         }
+{ Copyright (c) 1997-2001 Borland Software Corporation                    }
+{                                                                         }
+{ *********************************************************************** }
+
+{*******************************************************}
+{       COM server support                              }
+{*******************************************************}
+
+unit ComServ;
+
+{$DENYPACKAGEUNIT}                                  
+
+interface
+
+uses Windows, Messages, ActiveX, SysUtils, ComObj;
+
+type
+
+{ Application start mode }
+
+  TStartMode = (smStandalone, smAutomation, smRegServer, smUnregServer);
+
+{ Class manager event types }
+
+  TLastReleaseEvent = procedure(var Shutdown: Boolean) of object;
+
+{ TComServer }
+
+  TComServer = class(TComServerObject)
+  protected
+    function CountObject(Created: Boolean): Integer; override;
+    function CountFactory(Created: Boolean): Integer; override;
+    function GetHelpFileName: string; override;
+    function GetServerFileName: string; override;
+    function GetServerKey: string; override;
+    function GetServerName: string; override;
+    function GetStartSuspended: Boolean; override;
+    function GetTypeLib: ITypeLib; override;
+    procedure SetHelpFileName(const Value: string); override;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure Initialize;
+    procedure LoadTypeLib;
+    procedure SetServerName(const Name: string);
+    procedure UpdateRegistry(Register: Boolean);
+    property IsInprocServer: Boolean;
+    property ObjectCount: Integer;
+    property StartMode: TStartMode;
+    property UIInteractive: Boolean;
+    property OnLastRelease: TLastReleaseEvent;
+  end;
+
+var
+  ComServer: TComServer;
+
+function DllGetClassObject(const CLSID, IID: TGUID; var Obj): HResult; stdcall;
+function DllCanUnloadNow: HResult; stdcall;
+function DllRegisterServer: HResult; stdcall;
+function DllUnregisterServer: HResult; stdcall;
+
+implementation

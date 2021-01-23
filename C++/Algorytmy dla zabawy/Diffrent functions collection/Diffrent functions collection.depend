@@ -1,0 +1,55 @@
+# depslib dependency file v1.0
+1495813613 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\main.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"header.h"
+
+1495662911 c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\functions.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"main.cpp"
+
+1495662895 c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\main.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"functions.cpp"
+
+1495814361 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\functions.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	<math.h>
+	"header.h"
+
+1495814525 c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\header.h
+
+1495812190 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\diffrent functions collection\other.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"header.h"
+
+1509631578 source:e:\c++\algorytmy dla zabawy\diffrent functions collection\functions.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	<math.h>
+	"header.h"
+
+1509631578 e:\c++\algorytmy dla zabawy\diffrent functions collection\header.h
+
+1509631578 source:e:\c++\algorytmy dla zabawy\diffrent functions collection\main.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"header.h"
+
+1509631578 source:e:\c++\algorytmy dla zabawy\diffrent functions collection\other.cpp
+	<iostream>
+	<windows.h>
+	<cstdlib>
+	"header.h"
+

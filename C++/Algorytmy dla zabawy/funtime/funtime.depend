@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1484671876 source:e:\c++\szkolne2\c++\algorytmy dla zabawy\funtime\main.cpp
+	<iostream>
+	<time.h>
+	<cstdlib>
+	<windows.h>
+	<conio.h>
+	<fstream>
+

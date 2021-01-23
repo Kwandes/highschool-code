@@ -1,0 +1,130 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Delphi and Kylix Cross-Platform Visual Component Library                    }
+{                                                                             }
+{ Copyright (c) 1995, 2001 Borland Software Corporation                       }
+{                                                                             }
+{ *************************************************************************** }
+
+
+unit IniFiles;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses SysUtils, Classes;
+
+type
+  EIniFileException = class(Exception);
+
+  TCustomIniFile = class(TObject)
+  public
+    constructor Create(const FileName: string);
+    function SectionExists(const Section: string): Boolean;
+    function ReadString(const Section, Ident, Default: string): string; virtual; abstract;
+    procedure WriteString(const Section, Ident, Value: String); virtual; abstract;
+    function ReadInteger(const Section, Ident: string; Default: Longint): Longint; virtual;
+    procedure WriteInteger(const Section, Ident: string; Value: Longint); virtual;
+    function ReadBool(const Section, Ident: string; Default: Boolean): Boolean; virtual;
+    procedure WriteBool(const Section, Ident: string; Value: Boolean); virtual;
+    function ReadBinaryStream(const Section, Name: string; Value: TStream): Integer; virtual;
+    function ReadDate(const Section, Name: string; Default: TDateTime): TDateTime; virtual;
+    function ReadDateTime(const Section, Name: string; Default: TDateTime): TDateTime; virtual;
+    function ReadFloat(const Section, Name: string; Default: Double): Double; virtual;
+    function ReadTime(const Section, Name: string; Default: TDateTime): TDateTime; virtual;
+    procedure WriteBinaryStream(const Section, Name: string; Value: TStream); virtual;
+    procedure WriteDate(const Section, Name: string; Value: TDateTime); virtual;
+    procedure WriteDateTime(const Section, Name: string; Value: TDateTime); virtual;
+    procedure WriteFloat(const Section, Name: string; Value: Double); virtual;
+    procedure WriteTime(const Section, Name: string; Value: TDateTime); virtual;
+    procedure ReadSection(const Section: string; Strings: TStrings); virtual; abstract;
+    procedure ReadSections(Strings: TStrings); virtual; abstract;
+    procedure ReadSectionValues(const Section: string; Strings: TStrings); virtual; abstract;
+    procedure EraseSection(const Section: string); virtual; abstract;
+    procedure DeleteKey(const Section, Ident: String); virtual; abstract;
+    procedure UpdateFile; virtual; abstract;
+    function ValueExists(const Section, Ident: string): Boolean;
+    property FileName: string;
+  end;
+
+  { TStringHash - used internally by TMemIniFile to optimize searches. }
+
+  PPHashItem = ^PHashItem;
+  PHashItem = ^THashItem;
+  THashItem = record
+    Next: PHashItem;
+    Key: string;
+    Value: Integer;
+  end;
+
+  TStringHash = class
+  protected
+    function Find(const Key: string): PPHashItem;
+    function HashOf(const Key: string): Cardinal; virtual;
+  public
+    constructor Create(Size: Integer = 256);
+    destructor Destroy; override;
+    procedure Add(const Key: string; Value: Integer);
+    procedure Clear;
+    procedure Remove(const Key: string);
+    function Modify(const Key: string; Value: Integer): Boolean;
+    function ValueOf(const Key: string): Integer;
+  end;
+
+  { THashedStringList - A TStringList that uses TStringHash to improve the
+    speed of Find }
+  THashedStringList = class(TStringList)
+  protected
+    procedure Changed; override;
+  public
+    destructor Destroy; override;
+    function IndexOf(const S: string): Integer; override;
+    function IndexOfName(const Name: string): Integer; override;
+  end;
+
+  { TMemIniFile - loads and entire ini file into memory and allows all
+    operations to be performed on the memory image.  The image can then
+    be written out to the disk file }
+
+  TMemIniFile = class(TCustomIniFile)
+  public
+    constructor Create(const FileName: string);
+    destructor Destroy; override;
+    procedure Clear;
+    procedure DeleteKey(const Section, Ident: String); override;
+    procedure EraseSection(const Section: string); override;
+    procedure GetStrings(List: TStrings);
+    procedure ReadSection(const Section: string; Strings: TStrings); override;
+    procedure ReadSections(Strings: TStrings); override;
+    procedure ReadSectionValues(const Section: string; Strings: TStrings); override;
+    function ReadString(const Section, Ident, Default: string): string; override;
+    procedure Rename(const FileName: string; Reload: Boolean);
+    procedure SetStrings(List: TStrings);
+    procedure UpdateFile; override;
+    procedure WriteString(const Section, Ident, Value: String); override;
+    property CaseSensitive: Boolean;
+  end;
+
+{$IFDEF MSWINDOWS}
+  { TIniFile - Encapsulates the Windows INI file interface
+    (Get/SetPrivateProfileXXX functions) }
+
+  TIniFile = class(TCustomIniFile)
+  public
+    destructor Destroy; override;
+    function ReadString(const Section, Ident, Default: string): string; override;
+    procedure WriteString(const Section, Ident, Value: String); override;
+    procedure ReadSection(const Section: string; Strings: TStrings); override;
+    procedure ReadSections(Strings: TStrings); override;
+    procedure ReadSectionValues(const Section: string; Strings: TStrings); override;
+    procedure EraseSection(const Section: string); override;
+    procedure DeleteKey(const Section, Ident: String); override;
+    procedure UpdateFile; override;
+  end;
+{$ELSE}
+    TIniFile = class(TMemIniFile);
+{$ENDIF}
+
+
+implementation

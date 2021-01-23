@@ -1,0 +1,127 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit MPlayer;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses Windows, Classes, Controls, Forms, Graphics, Messages,
+  MMSystem, Dialogs, SysUtils;
+
+type
+  TMPBtnType = (btPlay, btPause, btStop, btNext, btPrev, btStep, btBack,
+    btRecord, btEject);
+  TButtonSet = set of TMPBtnType;
+
+  TMPGlyph = (mgEnabled, mgDisabled, mgColored);
+  TMPButton = record
+    Visible: Boolean;
+    Enabled: Boolean;
+    Colored: Boolean;
+    Auto: Boolean;
+    Bitmaps: array[TMPGlyph] of TBitmap;
+  end;
+
+  TMPDeviceTypes = (dtAutoSelect, dtAVIVideo, dtCDAudio, dtDAT, dtDigitalVideo, dtMMMovie,
+    dtOther, dtOverlay, dtScanner, dtSequencer, dtVCR, dtVideodisc, dtWaveAudio);
+  TMPTimeFormats = (tfMilliseconds, tfHMS, tfMSF, tfFrames, tfSMPTE24, tfSMPTE25,
+    tfSMPTE30, tfSMPTE30Drop, tfBytes, tfSamples, tfTMSF);
+  TMPModes = (mpNotReady, mpStopped, mpPlaying, mpRecording, mpSeeking,
+    mpPaused, mpOpen);
+  TMPNotifyValues = (nvSuccessful, nvSuperseded, nvAborted, nvFailure);
+    
+  TMPDevCaps = (mpCanStep, mpCanEject, mpCanPlay, mpCanRecord, mpUsesWindow);
+  TMPDevCapsSet = set of TMPDevCaps;
+  
+  EMPNotify = procedure (Sender: TObject; Button: TMPBtnType;
+    var DoDefault: Boolean) of object;
+  EMPPostNotify = procedure (Sender: TObject; Button: TMPBtnType) of object;
+
+  EMCIDeviceError = class(Exception);
+  
+  TMediaPlayer = class(TCustomControl)
+  protected
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
+    procedure Loaded; override;
+    procedure AutoButtonSet(Btn: TMPBtnType); dynamic;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure Paint; override;
+    procedure MMNotify(var Message: TMessage); message MM_MCINOTIFY;
+    procedure Click(Button: TMPBtnType; var DoDefault: Boolean); reintroduce; dynamic;
+    procedure PostClick(Button: TMPBtnType); dynamic;
+    procedure DoNotify; dynamic;
+    procedure Updated; override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Open;
+    procedure Close;
+    procedure Play;
+    procedure Stop;
+    procedure Pause; {Pause & Resume/Play}
+    procedure Step;
+    procedure Back;
+    procedure Previous;
+    procedure Next;
+    procedure StartRecording;
+    procedure Eject;
+    procedure Save;
+    procedure PauseOnly;
+    procedure Resume;
+    procedure Rewind;
+    property TrackLength[TrackNum: Integer]: Longint;
+    property TrackPosition[TrackNum: Integer]: Longint;
+    property Capabilities: TMPDevCapsSet;
+    property Error: Longint;
+    property ErrorMessage: string;
+    property Start: Longint;
+    property Length: Longint;
+    property Tracks: Longint;
+    property Frames: Longint;
+    property Mode: TMPModes;
+    property Position: Longint;
+    property Wait: Boolean;
+    property Notify: Boolean;
+    property NotifyValue: TMPNotifyValues;
+    property StartPos: Longint;
+    property EndPos: Longint;
+    property DeviceID: Word;
+    property TimeFormat: TMPTimeFormats;
+    property DisplayRect: TRect;
+  published
+    property ColoredButtons: TButtonSet default [btPlay, btPause, btStop, btNext, btPrev, btStep, btBack, btRecord, btEject];
+    property Enabled;
+    property EnabledButtons: TButtonSet default [btPlay, btPause, btStop, btNext, btPrev, btStep, btBack, btRecord, btEject];
+    property VisibleButtons: TButtonSet default [btPlay, btPause, btStop, btNext, btPrev, btStep, btBack, btRecord, btEject];
+    property Anchors;
+    property AutoEnable: Boolean default True;
+    property AutoOpen: Boolean default False;
+    property AutoRewind: Boolean default True;
+    property Constraints;
+    property DeviceType: TMPDeviceTypes default dtAutoSelect;
+    property Display: TWinControl;
+    property FileName: string;
+    property Shareable: Boolean default False;
+    property Visible;
+    property ParentShowHint;
+    property ShowHint;
+    property PopupMenu;
+    property TabOrder;
+    property TabStop default True;
+    property OnClick: EMPNotify;
+    property OnContextPopup;
+    property OnEnter;
+    property OnExit;
+    property OnPostClick: EMPPostNotify;
+    property OnNotify: TNotifyEvent;
+  end;
+
+implementation

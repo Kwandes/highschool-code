@@ -1,0 +1,379 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Delphi Runtime Library                                                  }
+{                                                                         }
+{ Copyright (c) 1997-2001 Borland Software Corporation                    }
+{                                                                         }
+{ *********************************************************************** }
+
+{*******************************************************}
+{       COM object support                              }
+{*******************************************************}
+
+unit ComObj;
+
+interface
+
+uses Variants, Windows, ActiveX, SysUtils {$IFDEF LINUX}, WinUtils {$ENDIF};
+
+type
+{ Forward declarations }
+
+  TComObjectFactory = class;
+  {$EXTERNALSYM TComObjectFactory}
+
+{ COM server abstract base class }
+
+  TComServerObject = class(TObject)
+  protected
+    function CountObject(Created: Boolean): Integer; virtual; abstract;
+    function CountFactory(Created: Boolean): Integer; virtual; abstract;
+    function GetHelpFileName: string; virtual; abstract;
+    function GetServerFileName: string; virtual; abstract;
+    function GetServerKey: string; virtual; abstract;
+    function GetServerName: string; virtual; abstract;
+    function GetStartSuspended: Boolean; virtual; abstract;
+    function GetTypeLib: ITypeLib; virtual; abstract;
+    procedure SetHelpFileName(const Value: string); virtual; abstract;
+  public
+    property HelpFileName: string;
+    property ServerFileName: string;
+    property ServerKey: string;
+    property ServerName: string;
+    property TypeLib: ITypeLib;
+    property StartSuspended: Boolean;
+  end;
+
+{ COM class manager }
+
+  TFactoryProc = procedure(Factory: TComObjectFactory) of object;
+  {$EXTERNALSYM TFactoryProc}
+
+
+  TComClassManager = class(TObject)
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure ForEachFactory(ComServer: TComServerObject;
+      FactoryProc: TFactoryProc);
+    function GetFactoryFromClass(ComClass: TClass): TComObjectFactory;
+    function GetFactoryFromClassID(const ClassID: TGUID): TComObjectFactory;
+  end;
+  {$EXTERNALSYM TComClassManager}
+
+{ IServerExceptionHandler }
+{ This interface allows you to report safecall exceptions that occur in a
+  TComObject server to a third party, such as an object that logs errors into
+  the system event log or a server monitor residing on another machine.
+  Obtain an interface from the error logger implementation and assign it
+  to your TComObject's ServerExceptionHandler property.  Each TComObject
+  instance can have its own server exception handler, or all instances can
+  share the same handler.  The server exception handler can override the
+  TComObject's default exception handling by setting Handled to True and
+  assigning an OLE HResult code to the HResult parameter.
+}
+
+  IServerExceptionHandler = interface
+    ['{6A8D432B-EB81-11D1-AAB1-00C04FB16FBC}']
+    procedure OnException(
+      const ServerClass, ExceptionClass, ErrorMessage: WideString;
+      ExceptAddr: Integer; const ErrorIID, ProgID: WideString;
+      var Handled: Integer; var Result: HResult); dispid 2;
+  end;
+
+{ COM object }
+
+  TComObject = class(TObject, IUnknown, ISupportErrorInfo)
+  protected
+    { IUnknown }
+    function IUnknown.QueryInterface = ObjQueryInterface;
+    function IUnknown._AddRef = ObjAddRef;
+    function IUnknown._Release = ObjRelease;
+    { IUnknown methods for other interfaces }
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+    { ISupportErrorInfo }
+    function InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
+  public
+    constructor Create;
+    constructor CreateAggregated(const Controller: IUnknown);
+    constructor CreateFromFactory(Factory: TComObjectFactory;
+      const Controller: IUnknown);
+    destructor Destroy; override;
+    procedure Initialize; virtual;
+    function ObjAddRef: Integer; virtual; stdcall;
+    function ObjQueryInterface(const IID: TGUID; out Obj): HResult; virtual; stdcall;
+    function ObjRelease: Integer; virtual; stdcall;
+{$IFDEF MSWINDOWS}
+    function SafeCallException(ExceptObject: TObject;
+      ExceptAddr: Pointer): HResult; override;
+{$ENDIF}
+    property Controller: IUnknown;
+    property Factory: TComObjectFactory;
+    property RefCount: Integer;
+    property ServerExceptionHandler: IServerExceptionHandler;
+  end;
+  {$EXTERNALSYM TComObject}
+
+{ COM class }
+
+  TComClass = class of TComObject;
+  {$EXTERNALSYM TComClass}
+
+{ Instancing mode for COM classes }
+
+  TClassInstancing = (ciInternal, ciSingleInstance, ciMultiInstance);
+
+{ Threading model supported by COM classes }
+
+  TThreadingModel = (tmSingle, tmApartment, tmFree, tmBoth, tmNeutral);
+
+{ COM object factory }
+
+  TComObjectFactory = class(TObject, IUnknown, IClassFactory, IClassFactory2)
+  protected
+    function GetProgID: string; virtual;
+    function GetLicenseString: WideString; virtual;
+    function HasMachineLicense: Boolean; virtual;
+    function ValidateUserLicense(const LicStr: WideString): Boolean; virtual;
+    { IUnknown }
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+    { IClassFactory }
+    function CreateInstance(const UnkOuter: IUnknown; const IID: TGUID;
+      out Obj): HResult; stdcall;
+    function LockServer(fLock: BOOL): HResult; stdcall;
+    { IClassFactory2 }
+    function GetLicInfo(var licInfo: TLicInfo): HResult; stdcall;
+    function RequestLicKey(dwResrved: Longint; out bstrKey: WideString): HResult; stdcall;
+    function CreateInstanceLic(const unkOuter: IUnknown; const unkReserved: IUnknown;
+      const iid: TIID; const bstrKey: WideString; out vObject): HResult; stdcall;
+  public
+    constructor Create(ComServer: TComServerObject; ComClass: TComClass;
+      const ClassID: TGUID; const ClassName, Description: string;
+      Instancing: TClassInstancing; ThreadingModel: TThreadingModel = tmSingle);
+    destructor Destroy; override;
+    function CreateComObject(const Controller: IUnknown): TComObject; virtual;
+    procedure RegisterClassObject;
+    procedure UpdateRegistry(Register: Boolean); virtual;
+    property ClassID: TGUID;
+    property ClassName: string;
+    property ComClass: TClass;
+    property ComServer: TComServerObject;
+    property Description: string;
+    property ErrorIID: TGUID;
+    property LicString: WideString;
+    property ProgID: string;
+    property Instancing: TClassInstancing;
+    property ShowErrors: Boolean;
+    property SupportsLicensing: Boolean;
+    property T;
+  end;
+  {$EXTERNALSYM TComObjectFactory}
+
+  { NOTE: TAggregatedObject and TContainedObject have been moved to system. }
+
+  TTypedComObject = class(TComObject, IProvideClassInfo)
+  protected
+    { IProvideClassInfo }
+    function GetClassInfo(out TypeInfo: ITypeInfo): HResult; stdcall;
+  end;
+  {$EXTERNALSYM TTypedComObject}
+
+  TTypedComClass = class of TTypedComObject;
+  {$EXTERNALSYM TTypedComClass}
+
+  TTypedComObjectFactory = class(TComObjectFactory)
+  public
+    constructor Create(ComServer: TComServerObject;
+      TypedComClass: TTypedComClass; const ClassID: TGUID;
+      Instancing: TClassInstancing; ThreadingModel: TThreadingModel = tmSingle);
+    function GetInterfaceTypeInfo(TypeFlags: Integer): ITypeInfo;
+    procedure UpdateRegistry(Register: Boolean); override;
+    property ClassInfo: ITypeInfo;
+  end;
+  {$EXTERNALSYM TTypedComObjectFactory}
+
+{ OLE Automation object }
+
+  TConnectEvent = procedure (const Sink: IUnknown; Connecting: Boolean) of object;
+  {$EXTERNALSYM TConnectEvent}
+
+  TAutoObjectFactory = class;
+  {$EXTERNALSYM TAutoObjectFactory}
+
+  TAutoObject = class(TTypedComObject, IDispatch)
+  protected
+    { IDispatch }
+    function GetIDsOfNames(const IID: TGUID; Names: Pointer;
+      NameCount, LocaleID: Integer; DispIDs: Pointer): HResult; virtual; stdcall;
+    function GetTypeInfo(Index, LocaleID: Integer; out TypeInfo): HResult; virtual; stdcall;
+    function GetTypeInfoCount(out Count: Integer): HResult; virtual; stdcall;
+    function Invoke(DispID: Integer; const IID: TGUID; LocaleID: Integer;
+      Flags: Word; var Params; VarResult, ExcepInfo, ArgErr: Pointer): HResult; virtual; stdcall;
+    { Other methods }
+    procedure EventConnect(const Sink: IUnknown; Connecting: Boolean);
+    procedure EventSinkChanged(const EventSink: IUnknown); virtual;
+    property AutoFactory: TAutoObjectFactory;
+    property EventSink: IUnknown;
+  public
+    procedure Initialize; override;
+  end;
+  {$EXTERNALSYM TAutoObject}
+
+{ OLE Automation class }
+
+  TAutoClass = class of TAutoObject;
+  {$EXTERNALSYM TAutoClass}
+
+{ OLE Automation object factory }
+
+  TAutoObjectFactory = class(TTypedComObjectFactory)
+  public
+    constructor Create(ComServer: TComServerObject; AutoClass: TAutoClass;
+      const ClassID: TGUID; Instancing: TClassInstancing;
+      ThreadingModel: TThreadingModel = tmSingle);
+    function GetIntfEntry(Guid: TGUID): PInterfaceEntry; virtual;
+    property DispIntfEntry: PInterfaceEntry;
+    property DispTypeInfo: ITypeInfo;
+    property EventIID: TGUID;
+    property EventTypeInfo: ITypeInfo;
+  end;
+
+  TAutoIntfObject = class(TInterfacedObject, IDispatch, ISupportErrorInfo)
+  protected
+    { IDispatch }
+    function GetIDsOfNames(const IID: TGUID; Names: Pointer;
+      NameCount, LocaleID: Integer; DispIDs: Pointer): HResult; stdcall;
+    function GetTypeInfo(Index, LocaleID: Integer; out TypeInfo): HResult; stdcall;
+    function GetTypeInfoCount(out Count: Integer): HResult; stdcall;
+    function Invoke(DispID: Integer; const IID: TGUID; LocaleID: Integer;
+      Flags: Word; var Params; VarResult, ExcepInfo, ArgErr: Pointer): HResult; stdcall;
+    { ISupportErrorInfo }
+    function InterfaceSupportsErrorInfo(const iid: TIID): HResult; stdcall;
+  public
+    constructor Create(const TypeLib: ITypeLib; const DispIntf: TGUID);
+{$IFDEF MSWINDOWS}
+    function SafeCallException(ExceptObject: TObject;
+      ExceptAddr: Pointer): HResult; override;
+{$ENDIF}
+    property DispIntfEntry: PInterfaceEntry;
+    property DispTypeInfo: ITypeInfo;
+    property DispIID: TGUID;
+  end;
+
+{ OLE exception classes }
+
+  EOleError = class(Exception);
+
+  EOleSysError = class(EOleError)
+  public
+    constructor Create(const Message: string; ErrorCode: HRESULT;
+      HelpContext: Integer);
+    property ErrorCode: HRESULT;
+  end;
+
+  EOleException = class(EOleSysError)
+  public
+    constructor Create(const Message: string; ErrorCode: HRESULT;
+      const Source, HelpFile: string; HelpContext: Integer);
+    property HelpFile: string;
+    property Source: string;
+  end;
+
+  EOleRegistrationError = class(EOleError);
+
+procedure DispatchInvoke(const Dispatch: IDispatch; CallDesc: PCallDesc;
+  DispIDs: PDispIDList; Params: Pointer; Result: PVariant);
+procedure DispatchInvokeError(Status: Integer; const ExcepInfo: TExcepInfo);
+
+function HandleSafeCallException(ExceptObject: TObject;
+  ExceptAddr: Pointer; const ErrorIID: TGUID; const ProgID,
+  HelpFileName: WideString): HResult;
+
+function CreateComObject(const ClassID: TGUID): IUnknown;
+function CreateRemoteComObject(const MachineName: WideString; const ClassID: TGUID): IUnknown;
+function CreateOleObject(const ClassName: string): IDispatch;
+function GetActiveOleObject(const ClassName: string): IDispatch;
+
+procedure OleError(ErrorCode: HResult);
+procedure OleCheck(Result: HResult);
+
+function StringToGUID(const S: string): TGUID;
+function GUIDToString(const ClassID: TGUID): string;
+
+function ProgIDToClassID(const ProgID: string): TGUID;
+function ClassIDToProgID(const ClassID: TGUID): string;
+
+procedure CreateRegKey(const Key, ValueName, Value: string; RootKey: DWord = HKEY_CLASSES_ROOT);
+procedure DeleteRegKey(const Key: string; RootKey: DWord = HKEY_CLASSES_ROOT);
+function GetRegStringValue(const Key, ValueName: string; RootKey: DWord = HKEY_CLASSES_ROOT): string;
+
+function StringToLPOLESTR(const Source: string): POleStr;
+
+procedure RegisterComServer(const DLLName: string);
+procedure RegisterAsService(const ClassID, ServiceName: string);
+
+function CreateClassID: string;
+
+procedure InterfaceConnect(const Source: IUnknown; const IID: TIID;
+  const Sink: IUnknown; var Connection: Longint);
+procedure InterfaceDisconnect(const Source: IUnknown; const IID: TIID;
+  var Connection: Longint);
+
+function GetDispatchPropValue(Disp: IDispatch; DispID: Integer): OleVariant; overload;
+function GetDispatchPropValue(Disp: IDispatch; Name: WideString): OleVariant; overload;
+procedure SetDispatchPropValue(Disp: IDispatch; DispID: Integer;
+  const Value: OleVariant); overload;
+procedure SetDispatchPropValue(Disp: IDispatch; Name: WideString;
+  const Value: OleVariant); overload;
+
+type
+  TCoCreateInstanceExProc = function (const clsid: TCLSID;
+    unkOuter: IUnknown; dwClsCtx: Longint; ServerInfo: PCoServerInfo;
+    dwCount: Longint; rgmqResults: PMultiQIArray): HResult stdcall;
+  {$EXTERNALSYM TCoCreateInstanceExProc}
+  TCoInitializeExProc = function (pvReserved: Pointer;
+    coInit: Longint): HResult; stdcall;
+  {$EXTERNALSYM TCoInitializeExProc}
+  TCoAddRefServerProcessProc = function :Longint; stdcall;
+  {$EXTERNALSYM TCoAddRefServerProcessProc}
+  TCoReleaseServerProcessProc = function :Longint; stdcall;
+  {$EXTERNALSYM TCoReleaseServerProcessProc}
+  TCoResumeClassObjectsProc = function :HResult; stdcall;
+  {$EXTERNALSYM TCoResumeClassObjectsProc}
+  TCoSuspendClassObjectsProc = function :HResult; stdcall;
+  {$EXTERNALSYM TCoSuspendClassObjectsProc}
+
+// COM functions that are only available on DCOM updated OSs
+// These pointers may be nil on Win95 or Win NT 3.51 systems
+var
+  CoCreateInstanceEx: TCoCreateInstanceExProc = nil;
+  {$EXTERNALSYM CoCreateInstanceEx}
+  CoInitializeEx: TCoInitializeExProc = nil;
+  {$EXTERNALSYM CoInitializeEx}
+  CoAddRefServerProcess: TCoAddRefServerProcessProc = nil;
+  {$EXTERNALSYM CoAddRefServerProcess}
+  CoReleaseServerProcess: TCoReleaseServerProcessProc = nil;
+  {$EXTERNALSYM CoReleaseServerProcess}
+  CoResumeClassObjects: TCoResumeClassObjectsProc = nil;
+  {$EXTERNALSYM CoResumeClassObjects}
+  CoSuspendClassObjects: TCoSuspendClassObjectsProc = nil;
+  {$EXTERNALSYM CoSuspendClassObjects}
+
+
+{ CoInitFlags determines the COM threading model of the application or current
+  thread. This bitflag value is passed to CoInitializeEx in ComServ initialization.
+  Assign COINIT_APARTMENTTHREADED or COINIT_MULTITHREADED to this variable before
+  Application.Initialize is called by the project source file to select a
+  threading model.  Other CoInitializeEx flags (such as COINIT_SPEED_OVER_MEMORY)
+  can be OR'd in also.  }
+var
+  CoInitFlags: Integer = -1;  // defaults to no threading model, call CoInitialize()
+
+function ComClassManager: TComClassManager;
+{$EXTERNALSYM ComClassManager}
+
+implementation

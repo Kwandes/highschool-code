@@ -1,0 +1,63 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Kylix and Delphi Cross-Platform Visual Component Library                    }
+{                                                                             }
+{ Copyright (c) 1995, 2001 Borland Software Corporation                       }
+{                                                                             }
+{ *************************************************************************** }
+
+
+unit MaskUtils;
+
+{$R-,T-,H+,X+}
+
+interface
+
+const
+  DefaultBlank: Char = '_';
+  MaskFieldSeparator: Char = ';';
+  MaskNoSave: Char = '0';
+
+  mDirReverse = '!';         { removes leading blanks if true, else trailing blanks}
+  mDirUpperCase = '>';       { all chars that follow to upper case }
+  mDirLowerCase = '<';       { all chars that follow to lower case }
+                             { '<>' means remove casing directive }
+  mDirLiteral = '\';         { char that immediately follows is a literal }
+
+  mMskAlpha = 'L';           { in US = A-Z,a-z }
+  mMskAlphaOpt = 'l';
+  mMskAlphaNum = 'A';        { in US = A-Z,a-z,0-9 }
+  mMskAlphaNumOpt  = 'a';
+  mMskAscii = 'C';           { any character}
+  mMskAsciiOpt = 'c';
+  mMskNumeric = '0';         { 0-9, no plus or minus }
+  mMskNumericOpt = '9';
+  mMskNumSymOpt = '#';       { 0-9, plus and minus }
+
+   { intl literals }
+  mMskTimeSeparator = ':';
+  mMskDateSeparator = '/';
+
+type
+  TMaskCharType = (mcNone, mcLiteral, mcIntlLiteral, mcDirective, mcMask,
+    mcMaskOpt, mcFieldSeparator, mcField);
+  TMaskDirectives = set of (mdReverseDir, mdUpperCase, mdLowerCase,
+    mdLiteralChar);
+  TMaskedText = type string;
+  TEditMask = type string;
+
+function FormatMaskText(const EditMask: string; const Value: string): string;
+function MaskGetMaskSave(const EditMask: string): Boolean;
+function MaskGetMaskBlank(const EditMask: string): Char;
+function MaskGetFldSeparator(const EditMask: string): Integer;
+function PadInputLiterals(const EditMask: String; const Value: string; Blank: Char): string;
+function MaskOffsetToOffset(const EditMask: String; MaskOffset: Integer): Integer;
+function MaskOffsetToWideOffset(const EditMask: String; MaskOffset: Integer): Integer;
+function IsLiteralChar(const EditMask: string; Offset: Integer): Boolean;
+function MaskGetCharType(const EditMask: string; MaskOffset: Integer): TMaskCharType;
+function MaskGetCurrentDirectives(const EditMask: string; MaskOffset: Integer): TMaskDirectives;
+function MaskIntlLiteralToChar(IChar: Char): Char;
+function OffsetToMaskOffset(const EditMask: string; Offset: Integer): Integer;
+function MaskDoFormatText(const EditMask: string; const Value: string; Blank: Char): string;
+
+implementation

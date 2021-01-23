@@ -1,0 +1,87 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 2000,2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit WinHelpViewer;
+
+{ ************************************************************************ }
+{                                                                          }
+{  This unit implements a help viewer for WinHelp (on Windows) or          }
+{  HyperHelp (a WinHelp emulator) on Linux. The design goal is for this    }
+{  unit to be indistinguishable from other viewers as far as the IDE help  }
+{  manager can determine --- there should be no special casing.            }
+{                                                                          }
+{  Because neither WinHelp nor HyperHelp support direct querying without   }
+{  displaying results, it is necessary for the WinHelp viewer to maintain  }
+{  a topic list itself. In the case of the built-in IDE help viewer, this  }
+{  list is drawn out of the .ALS file, and the analysis of the list is     }
+{  delegated to an implementation of IWinHelpTester. The code for this     }
+{  is not publically available, and individual applications wishing to     }
+{  support this functionality must implement IWinHelpTester themselves.    }
+{  Absent an implementation of IWinHelpTester, the WinHelpViewer will      }
+{  *always* assume that the query should succeed and WinHelp can be asked  }
+{  to provide help (in a Windows application; the opposite is true in a    }
+{  Linux application). Any application supporting multiple help viewers is }
+{  encouraged to implement IWinHelpTester to get around this.              }
+{                                                                          }
+{  Much of the code in this file was ripped from existing systems which    }
+{  have been redirected through this system; some of the obscurity is      }
+{  built-in, and significant portions of the code reflect necessities      }
+{  imposed by interactions with ancient WinHelp systems.                   }
+{                                                                          }
+{  This file is part of the Visual Component Library on Windows, and is    }
+{  linked into the VCL package. On Linux, it is provided as an example     }
+{  and may be used *in applications* as desired. This file does not work   }
+{  when linked into a package on Linux (because the unit is already used   }
+{  by the IDE), and will not interact with HyperHelp without an associated }
+{  implementation of the function WinHelp. NOTE: winhelp.so is provided by }
+{  Borland for use of the IDE only and is *not* redistributable in any     }
+{  fashion. Developers of applications wishing to use HyperHelp *must*     }
+{  licence HyperHelp seperately from Bristol Technologies.                 }
+{                                                                          }
+{ ************************************************************************ }
+
+interface
+
+uses Classes;
+
+{ Because WinHelp is uncooperative about responding to queries along the 
+  lines of 'do you support this', the WinHelp viewer in essence needs to
+  hack a response to that. This interface is a hook by which user applications
+  can override the WinHelp viewer's default hack answer. }
+
+type
+  IWinHelpTester = interface(IInterface)
+    ['{B0FC9354-5F0E-11D3-A3B9-00C04F79AD3A}']
+    function CanShowALink(const ALink, FileName: String): Boolean;
+    function CanShowTopic(const Topic, FileName: String): Boolean;
+    function CanShowContext(const Context: Integer; 
+                            const FileName: String): Boolean;
+    function GetHelpStrings(const ALink: String): TStringList;
+    function GetHelpPath : String;
+    function GetDefaultHelpFile: String;
+    end;
+
+{ Naming variables which can be set externally, probably by the implementation
+  of WinHelpTester. }
+
+var
+ WinHelpTester : IWinHelpTester;
+ { The Viewer Name is the name used by the Help Manager when it
+   needs to display a UI element to allow the program's user to
+	 select a viewer by name. }
+ ViewerName : String;
+{$IFDEF LINUX}
+ { HyperHelp requires that you specify the name of the window, and requires
+   in which it will display help information, as well. }
+ HyperHelpWindowName : String;
+{$ENDIF}
+
+{ =========================================================================== }
+
+implementation

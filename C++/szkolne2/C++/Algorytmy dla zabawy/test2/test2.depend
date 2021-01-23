@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1484461536 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\test2\main.cpp
+	<iostream>
+	<cstdio>
+	<stdio.h>
+	<windows.h>
+

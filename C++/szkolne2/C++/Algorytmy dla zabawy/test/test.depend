@@ -1,0 +1,13 @@
+# depslib dependency file v1.0
+1484503405 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\test\main.cpp
+	<iostream>
+	<cstdio>
+	<stdio.h>
+	<windows.h>
+
+1484504155 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\test\reverse.cpp
+	<iostream>
+	<cstdio>
+	<stdio.h>
+	<windows.h>
+

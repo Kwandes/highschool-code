@@ -1,0 +1,321 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit Menus;
+
+{$S-,W-,R-,T-,H+,X+}
+{$C PRELOAD}
+
+interface
+
+uses Windows, SysUtils, Classes, Contnrs, Messages, Graphics, ImgList, ActnList;
+
+type
+  TMenuItem = class;
+
+  EMenuError = class(Exception);
+  TMenu = class;
+  TMenuBreak = (mbNone, mbBreak, mbBarBreak);
+  TMenuChangeEvent = procedure (Sender: TObject; Source: TMenuItem; Rebuild: Boolean) of object;
+  TMenuDrawItemEvent = procedure (Sender: TObject; ACanvas: TCanvas;
+    ARect: TRect; Selected: Boolean) of object;
+  TAdvancedMenuDrawItemEvent = procedure (Sender: TObject; ACanvas: TCanvas;
+    ARect: TRect; State: TOwnerDrawState) of object;
+  TMenuMeasureItemEvent = procedure (Sender: TObject; ACanvas: TCanvas;
+    var Width, Height: Integer) of object;
+  TMenuItemAutoFlag = (maAutomatic, maManual, maParent);
+  TMenuAutoFlag = maAutomatic..maManual;
+
+{ TMenuActionLink }
+
+  TMenuActionLink = class(TActionLink)
+  protected
+    FClient: TMenuItem;
+    procedure AssignClient(AClient: TObject); override;
+    function IsAutoCheckLinked: Boolean; virtual;
+    function IsCaptionLinked: Boolean; override;
+    function IsCheckedLinked: Boolean; override;
+    function IsEnabledLinked: Boolean; override;
+    function IsHelpContextLinked: Boolean; override;
+    function IsHintLinked: Boolean; override;
+    function IsGroupIndexLinked: Boolean; override;
+    function IsImageIndexLinked: Boolean; override;
+    function IsShortCutLinked: Boolean; override;
+    function IsVisibleLinked: Boolean; override;
+    function IsOnExecuteLinked: Boolean; override;
+    procedure SetAutoCheck(Value: Boolean); override;
+    procedure SetCaption(const Value: string); override;
+    procedure SetChecked(Value: Boolean); override;
+    procedure SetEnabled(Value: Boolean); override;
+    procedure SetHelpContext(Value: THelpContext); override;
+    procedure SetHint(const Value: string); override;
+    procedure SetImageIndex(Value: Integer); override;
+    procedure SetShortCut(Value: TShortCut); override;
+    procedure SetVisible(Value: Boolean); override;
+    procedure SetOnExecute(Value: TNotifyEvent); override;
+  end;
+
+  TMenuActionLinkClass = class of TMenuActionLink;
+
+{ TMenuItem }
+
+  TMenuItem = class(TComponent)
+  protected
+    procedure ActionChange(Sender: TObject; CheckDefaults: Boolean); dynamic;
+    procedure AdvancedDrawItem(ACanvas: TCanvas; ARect: TRect;
+      State: TOwnerDrawState; TopLevel: Boolean); virtual;
+    procedure AssignTo(Dest: TPersistent); override;
+    procedure DefineProperties(Filer: TFiler); override;
+    procedure DoDrawText(ACanvas: TCanvas; const ACaption: string;
+      var Rect: TRect; Selected: Boolean; Flags: Longint);
+    procedure DrawItem(ACanvas: TCanvas; ARect: TRect; Selected: Boolean); virtual;
+    function GetActionLinkClass: TMenuActionLinkClass; dynamic;
+    function GetHandle: HMENU;
+    function GetCount: Integer;
+    procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
+    function GetItem(Index: Integer): TMenuItem;
+    function GetMenuIndex: Integer;
+    function GetAutoHotkeys: Boolean;
+    function GetAutoLineReduction: Boolean;
+    function InsertNewLine(ABefore: Boolean; AItem: TMenuItem): Integer;
+    procedure MeasureItem(ACanvas: TCanvas; var Width, Height: Integer); virtual;
+    procedure MenuChanged(Rebuild: Boolean); virtual;
+    procedure Loaded; override;
+    procedure Notification(AComponent: TComponent;
+      Operation: TOperation); override;
+    procedure SetBreak(Value: TMenuBreak);
+    procedure SetCaption(const Value: string);
+    procedure SetChecked(Value: Boolean);
+    procedure SetChildOrder(Child: TComponent; Order: Integer); override;
+    procedure SetDefault(Value: Boolean);
+    procedure SetEnabled(Value: Boolean);
+    procedure SetGroupIndex(Value: Byte);
+    procedure SetImageIndex(Value: TImageIndex);
+    procedure SetMenuIndex(Value: Integer);
+    procedure SetParentComponent(Value: TComponent); override;
+    procedure SetRadioItem(Value: Boolean);
+    procedure SetShortCut(Value: TShortCut);
+    procedure SetVisible(Value: Boolean);
+    procedure UpdateItems;
+    property ActionLink: TMenuActionLink;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure InitiateAction; virtual;
+    procedure Insert(Index: Integer; Item: TMenuItem);
+    procedure Delete(Index: Integer);
+    procedure Clear;
+    procedure Click; virtual;
+    function Find(ACaption: string): TMenuItem;
+    function IndexOf(Item: TMenuItem): Integer;
+    function IsLine: Boolean;
+    function GetImageList: TCustomImageList;
+    function GetParentComponent: TComponent; override;
+    function GetParentMenu: TMenu;
+    function HasParent: Boolean; override;
+    function NewTopLine: Integer;
+    function NewBottomLine: Integer;
+    function InsertNewLineBefore(AItem: TMenuItem): Integer;
+    function InsertNewLineAfter(AItem: TMenuItem): Integer;
+    procedure Add(Item: TMenuItem); overload;
+    procedure Add(const AItems: array of TMenuItem); overload;
+    procedure Remove(Item: TMenuItem);
+    function RethinkHotkeys: Boolean;
+    function RethinkLines: Boolean;
+    property Command: Word;
+    property Handle: HMENU;
+    property Count: Integer;
+    property Items[Index: Integer]: TMenuItem; default;
+    property MenuIndex: Integer;
+    property Parent: TMenuItem;
+  published
+    property Action: TBasicAction;
+    property AutoCheck: Boolean default False;
+    property AutoHotkeys: TMenuItemAutoFlag default maParent;
+    property AutoLineReduction: TMenuItemAutoFlag default maParent;
+    property Bitmap: TBitmap;
+    property Break: TMenuBreak default mbNone;
+    property Caption: string;
+    property Checked: Boolean default False;
+    property SubMenuImages: TCustomImageList;
+    property Default: Boolean default False;
+    property Enabled: Boolean default True;
+    property GroupIndex: Byte default 0;
+    property HelpContext: THelpContext default 0;
+    property Hint: string;
+    property ImageIndex: TImageIndex default -1;
+    property RadioItem: Boolean default False;
+    property ShortCut: TShortCut default 0;
+    property Visible: Boolean default True;
+    property OnClick: TNotifyEvent;
+    property OnDrawItem: TMenuDrawItemEvent;
+    property OnAdvancedDrawItem: TAdvancedMenuDrawItemEvent;
+    property OnMeasureItem: TMenuMeasureItemEvent;
+  end;
+
+  TFindItemKind = (fkCommand, fkHandle, fkShortCut);
+
+  TMenu = class(TComponent)
+  protected
+    procedure AdjustBiDiBehavior;
+    procedure DoChange(Source: TMenuItem; Rebuild: Boolean); virtual;
+    procedure DoBiDiModeChanged;
+    function DoGetMenuString(Menu: HMENU; ItemID: UINT; Str: PChar;
+      MaxCount: Integer; Flag: UINT): Integer;
+    procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
+    function GetHandle: HMENU; virtual;
+    function IsOwnerDraw: Boolean;
+    procedure Loaded; override;
+    procedure MenuChanged(Sender: TObject; Source: TMenuItem; Rebuild: Boolean); virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SetChildOrder(Child: TComponent; Order: Integer); override;
+    procedure UpdateItems;
+    property OnChange: TMenuChangeEvent;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    function DispatchCommand(ACommand: Word): Boolean;
+    function DispatchPopup(AHandle: HMENU): Boolean;
+    function FindItem(Value: Integer; Kind: TFindItemKind): TMenuItem;
+    function GetHelpContext(Value: Integer; ByCommand: Boolean): THelpContext;
+    property Images: TCustomImageList;
+    function IsRightToLeft: Boolean;
+    function IsShortCut(var Message: TWMKey): Boolean; dynamic;
+    procedure ParentBiDiModeChanged; overload;
+    procedure ParentBiDiModeChanged(AControl: TObject); overload;
+    procedure ProcessMenuChar(var Message: TWMMenuChar);
+    property AutoHotkeys: TMenuAutoFlag default maAutomatic;
+    property AutoLineReduction: TMenuAutoFlag default maAutomatic;
+    property BiDiMode: TBiDiMode;
+    property Handle: HMENU;
+    property OwnerDraw: Boolean default False;
+    property ParentBiDiMode: Boolean default True;
+    property WindowHandle: HWND;
+  published
+    property Items: TMenuItem;
+  end;
+
+  TMainMenu = class(TMenu)
+  protected
+    procedure MenuChanged(Sender: TObject; Source: TMenuItem; Rebuild: Boolean); override;
+    function GetHandle: HMENU; override;
+  public
+    procedure Merge(Menu: TMainMenu);
+    procedure Unmerge(Menu: TMainMenu);
+    procedure PopulateOle2Menu(SharedMenu: HMenu; const Groups: array of Integer;
+      var Widths: array of Longint);
+    procedure GetOle2AcceleratorTable(var AccelTable: HAccel;
+      var AccelCount: Integer; const Groups: array of Integer);
+    procedure SetOle2MenuHandle(Handle: HMENU);
+  published
+    property AutoHotkeys;
+    property AutoLineReduction;
+    property AutoMerge: Boolean default False;
+    property BiDiMode;
+    property Images;
+    property OwnerDraw;
+    property ParentBiDiMode;
+    property OnChange;
+  end;
+
+  TPopupAlignment = (paLeft, paRight, paCenter);
+  TTrackButton = (tbRightButton, tbLeftButton);
+  TMenuAnimations = (maLeftToRight, maRightToLeft, maTopToBottom, maBottomToTop, maNone);
+  TMenuAnimation = set of TMenuAnimations;
+
+  TPopupMenu = class(TMenu)
+  protected
+    function UseRightToLeftAlignment: Boolean;
+    procedure DoPopup(Sender: TObject); virtual;
+  public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Popup(X, Y: Integer); virtual;
+    property PopupComponent: TComponent;
+    property PopupPoint: TPoint;
+  published
+    property Alignment: TPopupAlignment default paLeft;
+    property AutoHotkeys;
+    property AutoLineReduction;
+    property AutoPopup: Boolean default True;
+    property BiDiMode;
+    property HelpContext: THelpContext default 0;
+    property Images;
+    property MenuAnimation: TMenuAnimation default [];
+    property OwnerDraw;
+    property ParentBiDiMode;
+    property TrackButton: TTrackButton default tbRightButton;
+    property OnChange;
+    property OnPopup: TNotifyEvent;
+  end;
+
+  TPopupList = class(TList)
+  protected
+    FWindow: HWND;
+    procedure MainWndProc(var Message: TMessage);
+    procedure WndProc(var Message: TMessage); virtual;
+  public
+    property Window: HWND;
+    procedure Add(Popup: TPopupMenu);
+    procedure Remove(Popup: TPopupMenu);
+  end;
+
+  PMenuItem = ^TMenuItem;
+
+  TMenuItemStack = class(TStack)
+  public
+    procedure ClearItem(AItem: TMenuItem);
+  end;
+
+var
+  PopupList: TPopupList;
+  ShortCutItems: TMenuItemStack;
+
+function ShortCut(Key: Word; Shift: TShiftState): TShortCut;
+procedure ShortCutToKey(ShortCut: TShortCut; var Key: Word; var Shift: TShiftState);
+function ShortCutToText(ShortCut: TShortCut): string;
+function TextToShortCut(Text: string): TShortCut;
+
+function NewMenu(Owner: TComponent; const AName: string; const Items: array of TMenuItem): TMainMenu;
+function NewPopupMenu(Owner: TComponent; const AName: string;
+  Alignment: TPopupAlignment; AutoPopup: Boolean; const Items: array of TMenuItem): TPopupMenu;
+function NewSubMenu(const ACaption: string; hCtx: THelpContext;
+  const AName: string; const Items: array of TMenuItem; AEnabled: Boolean = True): TMenuItem;
+function NewItem(const ACaption: string; AShortCut: TShortCut;
+  AChecked, AEnabled: Boolean; AOnClick: TNotifyEvent; hCtx: THelpContext;
+  const AName: string): TMenuItem;
+function NewLine: TMenuItem;
+
+procedure DrawMenuItem(MenuItem: TMenuItem; ACanvas: TCanvas; ARect: TRect;
+  State: TOwnerDrawState);
+
+var
+  { These are the hotkeys that the auto-hotkey system will pick from.
+    Change this global variable at runtime if you want to add or remove
+    characters from the available characters.  Notice that by default we
+    do not do international characters. }
+  ValidMenuHotkeys: string = '1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ'; { do not localize }
+
+const
+  cHotkeyPrefix = '&';
+  cLineCaption = '-';
+  cDialogSuffix = '...';
+
+{ StripHotkey removes the & escape char that marks the hotkey character(s) in
+  the string.  When the current locale is a Far East locale, this function also
+  looks for and removes parens around the hotkey, common in Far East locales. }
+function StripHotkey(const Text: string): string;
+
+{ GetHotkey will return the last hotkey that StripHotkey would strip. }
+function GetHotkey(const Text: string): string;
+
+{ Similar to AnsiSameText but strips hotkeys before comparing }
+function AnsiSameCaption(const Text1, Text2: string): Boolean;
+
+implementation

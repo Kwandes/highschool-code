@@ -1,0 +1,3372 @@
+unit xdom;
+
+// ********************************************************************
+// This is a modified version of the XDOM 2.3.14 distribution which is
+// included with Borland's Kylix, Delphi and C++ Builder products.
+// all modifications from the original are marked with the text:
+// "Borland Change".
+// ********************************************************************
+//
+// XDOM 2.3.14
+// Extended Document Object Model 2.3.14
+// Delphi 3/4/5 Implementation
+//
+// Copyright (c) 1999-2001 by Dieter Köhler
+// ("http://www.philo.de/xml/")
+//
+// Definitions:
+// - "Package" refers to the collection of files distributed by
+//   the Copyright Holder, and derivatives of that collection of
+//   files created through textual modification.
+// - "Standard Version" refers to such a Package if it has not
+//   been modified, or has been modified in accordance with the
+//   wishes of the Copyright Holder.
+// - "Copyright Holder" is whoever is name in the copyright or
+//   copyrights for the package.
+// - "You" is you, if you're thinking about copying or distributing
+//   this Package.
+//
+// Permission is hereby granted, free of charge, to any person
+// obtaining a copy of this software and associated documentation
+// files (the "Package"), to deal in the Package without restriction,
+// including without limitation the rights to use, copy, modify,
+// merge, publish, distribute, sublicense, and/or sell copies of the
+// Package, and to permit persons to whom the Package is furnished
+// to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Package.
+//
+// You may modify your copy of this Package in any way, provided
+// that you insert a prominent notice in each changed file stating
+// how and when you changed a file, and provided that you do at
+// least one of the following:
+//
+// a) allow the Copyright Holder to include your modifications in
+// the Standard Version of the Package.
+//
+// b) use the modified Package only within your corporation or
+// organization.
+//
+// c) rename any non standard executables, units, and classes so
+// the names do not conflict with standard executables, units, and
+// classes, and provide a separate manual page that clearly documents
+// how it differs from the standard version.
+//
+// d) make other distribution arrangements with the Copyright Holder.
+//
+// The name of the Copyright Holder may not be used to endorse or
+// promote products derived from this Package without specific prior
+// written permission.
+//
+// THE PACKAGE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// PACKAGE OR THE USE OR OTHER DEALINGS IN THE PACKAGE.
+
+interface
+
+uses
+  {$IFDEF LINUX}
+  Libc,
+  {$ENDIF}
+  Math, SysUtils, Classes;
+
+resourcestring
+  SCannotReadOddPos = 'Cannot read WideString from odd byte position';
+  SCannotWriteOddPos = 'Cannot write WideString to odd byte position';
+  SOddSizeInvalid = 'Odd size not valid for WideString';
+  SNegativeSizeInvalid = 'Negative stream size invalid';
+  SOddPosInvalid = 'Odd byte position not valid for WideString';
+  SCapacityLessSize = 'Capacity cannot be less than size';
+  STargetNil = 'Must have a target stream';
+
+type
+  EDomException = class(Exception);
+
+  EIndex_Size_Err = class(EdomException);
+  EDomstring_Size_Err = class(EdomException);
+  EHierarchy_Request_Err = class(EdomException);
+  EWrong_Document_Err = class(EdomException);
+  EInvalid_Character_Err = class(EdomException);
+  ENo_Data_Allowed_Err = class(EdomException);
+  ENo_Modification_Allowed_Err = class(EdomException);
+  ENot_Found_Err = class(EdomException);
+  ENot_Supported_Err = class(EdomException);
+  EInuse_Attribute_Err = class(EdomException);
+  EInvalid_State_Err = class(EdomException);
+  ESyntax_Err = class(EdomException);
+  EInvalid_Modification_Err = class(EdomException);
+  ENamespace_Err = class(EdomException);
+  EInvalid_Access_Err = class(EdomException);
+  EInuse_Node_Err = class(EdomException);
+  EInuse_Content_Model_Err = class(EdomException);
+  EInuse_AttributeDefinition_Err = class(EdomException);
+  ENo_External_Entity_Allowed_Err = class(EdomException);
+  EInvalid_Entity_Reference_Err = class(EdomException);
+  EUnknown_Document_Format_Err = class(EdomException);
+
+  EParserException = class(Exception);
+
+  EInternalParserException = class(EParserException);
+
+  EParserFatalError = class(EParserException);
+  EParserError = class(EParserException);
+  EParserWarning = class(EParserException);
+  EParserNamespaceFatalError = class(EParserFatalError);
+
+  EParserMissingWhiteSpace_Err = class(EParserFatalError);
+  EParserMissingQuotationMark_Err = class(EParserFatalError);
+  EParserMissingEqualitySign_Err = class(EParserFatalError);
+  EParserDoubleEqualitySign_Err = class(EParserFatalError);
+  EParserInvalidElementName_Err = class(EParserFatalError);
+  EParserInvalidAttributeName_Err = class(EParserFatalError);
+  EParserInvalidAttributeValue_Err = class(EParserFatalError);
+  EParserDoubleAttributeName_Err = class(EParserFatalError);
+  EParserInvalidEntityName_Err = class(EParserFatalError);
+  EParserInvalidProcessingInstruction_Err = class(EParserFatalError);
+  EParserInvalidXmlDeclaration_Err = class(EParserFatalError);
+  EParserInvalidCharRef_Err = class(EParserFatalError);
+  EParserMissingStartTag_Err = class(EParserFatalError);
+  EParserMissingEndTag_Err = class(EParserFatalError);
+  EParserInvalidEndTag_Err = class(EParserFatalError);
+  EParserInvalidCharacter_Err = class(EParserFatalError);
+  EParserNotInRoot_Err = class(EParserFatalError);
+  EParserDoubleRootElement_Err = class(EParserFatalError);
+  EParserRootNotFound_Err = class(EParserFatalError);
+  EParserWrongOrder_Err = class(EParserFatalError);
+  EParserInvalidDoctype_Err = class(EParserFatalError);
+  EParserInvalidTextDeclaration_Err = class(EParserFatalError);
+  EParserLtInAttributeValue_Err = class(EParserFatalError);
+  EParserAttributeValueRefersToExternalEntity_Err = class(EParserFatalError);
+  EParserReferenceToUnparsedEntity_Err = class(EParserFatalError);
+  EParserNoProperMarkupReferenced_Err = class(EParserFatalError);
+  EParserInvalidComment_Err = class(EParserFatalError);
+  EParserInvalidCDATASection_Err = class(EParserFatalError);
+  EParserInvalidSystemLiteral_Err = class(EParserFatalError);
+  EParserInvalidPubidLiteral_Err = class(EParserFatalError);
+  EParserInvalidDoctypeName_Err = class(EParserFatalError);
+
+  EParserInvalidQualifiedName_Err = class(EParserNamespaceFatalError);
+  EParserInvalidPrefix_Err = class(EParserNamespaceFatalError);
+  EParserInvalidNamespaceURI_Err = class(EParserNamespaceFatalError);
+  EParserNamespaceURINotFound_Err = class(EParserNamespaceFatalError);
+  EParserWrongPrefixMappingNesting_Err = class(EParserNamespaceFatalError);
+
+  EParserDoubleDoctype_Err = class(EParserInvalidDoctype_Err);
+  EParserUnknownDeclarationType_Err = class(EParserInvalidDoctype_Err);
+  EParserInvalidEntityDeclaration_Err = class(EParserInvalidDoctype_Err);
+  EParserInvalidElementDeclaration_Err = class(EParserInvalidDoctype_Err);
+  EParserInvalidAttributeDeclaration_Err = class(EParserInvalidDoctype_Err);
+  EParserInvalidNotationDeclaration_Err = class(EParserInvalidDoctype_Err);
+  EParserInvalidConditionalSection_Err = class(EParserInvalidDoctype_Err);
+
+  EParserDouble_AttDef_Warning = class(EParserWarning);
+  EParserDouble_Entity_Decl_Warning = class(EParserWarning);
+  EParserDouble_Parameter_Entity_Decl_Warning = class(EParserWarning);
+  EParserUnusable_Entity_Decl_Warning = class(EParserWarning);
+
+  EParserMissing_Entity_Declaration_Err = class(EParserError);
+  EParserDouble_Element_Type_Declaration_Err = class(EParserError);
+  EParserDuplicate_Name_In_Mixed_Content_Err = class(EParserError);
+  EParserDuplicate_ID_On_Element_Type_Err = class(EParserError);
+  EParserUndeclared_Notation_Name_Err = class(EParserError);
+  EParserDuplicate_Notation_On_Element_Type_Err = class(EParserError);
+  EParserDuplicate_Notation_Token_Err = class(EParserError);
+  EParserNotation_On_Empty_Element_Err = class(EParserError);
+  EParserDuplicate_Enumeration_Token_Err = class(EParserError);
+  EParserAttribute_Type_Mismatch_Err = class(EParserError);
+  EParserDuplicate_Tokens_Err = class(EParserError);
+  EParserId_Neither_Implied_Nor_Required_Err = class(EParserError);
+  EParserWrong_Root_Element_Type_Err = class(EParserError);
+  EParserElement_Type_Declaration_Not_Found_Err = class(EParserError);
+  EParserElement_Declared_Empty_Has_Content_Err = class(EParserError);
+  EParserElement_With_Illegal_Mixed_Content_Err = class(EParserError);
+  EParserElement_With_Illegal_Element_Content_Err = class(EParserError);
+  EParserNondeterministic_Element_Content_Model_Err = class(EParserError);
+  EParserDuplicate_Notation_Decl_Err = class(EParserError);
+  EParserAttribute_Definition_Not_Found_Err = class(EParserError);
+  EParserRequired_Attribute_Not_Found_Err = class(EParserError);
+  EParserFixed_Attribute_Mismatch_Err = class(EParserError);
+  EParserAttribute_Default_Type_Mismatch_Err = class(EParserError);
+  EParserDuplicate_ID_Value_Err = class(EParserError);
+  EParserTarget_ID_Value_Not_Found_Err = class(EParserError);
+  EParserTarget_Unparsed_Entity_Not_Found_Err = class(EParserError);
+  EParserWrong_Declaration_Of_Predefined_Entity_Err = class(EParserError);
+  EParserUnresolvable_Entity_Reference_Err = class(EParserError);
+  EParserUnresolvable_Parameter_Entity_Reference_Err = class(EParserError);
+  EParserExternal_Subset_Not_Found_Err = class(EParserError);
+  EParserExternal_Entity_Not_Found_Err = class(EParserError);
+
+  TdomNodeType = (ntUnknown,
+                  ntElement_Node,
+                  ntAttribute_Node,
+                  ntText_Node,
+                  ntCDATA_Section_Node,
+                  ntEntity_Reference_Node,
+                  ntEntity_Node,
+                  ntProcessing_Instruction_Node,
+                  ntComment_Node,
+                  ntDocument_Node,
+                  ntDocument_Type_Node,
+                  ntDocument_Fragment_Node,
+                  ntNotation_Node);
+
+  TdomWhatToShow = set of TdomNodeType;
+
+const
+  show_all: TdomWhatToShow = [ntElement_Node .. High(TDomNodeType)];
+
+type
+  TdomNodeTypeSet = set of TdomNodeType;
+
+  TdomPieceType = (xmlProcessingInstruction,xmlXmlDeclaration,
+                   xmlTextDeclaration,xmlComment,xmlCDATA,xmlPCDATA,
+                   xmlDoctype,xmlStartTag,xmlEndTag,xmlEmptyElementTag,
+                   xmlCharRef,xmlEntityRef,xmlParameterEntityRef,
+                   xmlEntityDecl,xmlElementDecl,xmlAttributeDecl,
+                   xmlNotationDecl,xmlCondSection,xmlUnknown);
+
+  TdomEntityResolveOption = (erReplace,erExpand);
+
+  TdomContentspecType = (ctEmpty,ctAny,ctMixed,ctChildren);
+
+  // October 16, 2001 - Borland Change - Added etsystem enumeration
+  TdomEncodingType = (etUTF8,etUTF16BE,etUTF16LE,etLatin1,etLatin2,
+                      etLatin3,etLatin4,etCyrillic,etArabic,etGreek,
+                      etHebrew,etLatin5,etLatin6,etLatin7,etLatin8,
+                      etLatin9,etKOI8R,etcp10000_MacRoman,etcp1250,
+                      etcp1251,etcp1252,etsystem);
+
+  TdomFilterResult = (filter_accept,filter_reject,filter_skip);
+
+  TdomNode = class;
+  TdomElement = class;
+  TdomDocument = class;
+  TdomDocumentType = class;
+  TdomEntity = class;
+  TdomNotation = class;
+  TdomNodeList = class;
+
+  TdomAbstractView = class;
+
+  TdomMediaList = class;
+
+  TXmlSourceCodePiece = class;
+
+  TdomDocumentClass = class of TdomDocument;
+
+  PdomDocumentFormat = ^TdomDocumentFormat;
+
+  TdomDocumentFormat = record
+    DocumentClass: TdomDocumentClass;
+    NamespaceUri:  wideString;
+    QualifiedName: wideString;
+    next:          PdomDocumentFormat;
+  end;
+
+  TdomNameValueList = class
+  protected
+    FNames: TStringList;
+    FValues: TStringList;
+    function getLength: integer; virtual;
+    function getCapacity: integer; virtual;
+    function getNames(index: integer): wideString; virtual;
+    function getValues(index: integer): wideString; virtual;
+    procedure setCapacity(const value: integer); virtual;
+  public
+    constructor create;
+    destructor destroy; override;
+    function add(const name,
+                       value: wideString): integer; virtual;
+    procedure clear; virtual;
+    procedure Delete(const item: integer); virtual;
+    procedure exchange(const index1,
+                             index2: integer); virtual;
+    function indexOf(const name,
+                           value: wideString): integer; virtual;
+    function indexOfName(const name: wideString): integer; virtual;
+    procedure insert(const index: integer;
+                     const name,
+                           value: wideString); virtual;
+    property capacity: integer;
+    property length: integer;
+    property names[index: integer]: wideString;
+    property values[index: integer]: wideString;
+  end;
+
+  TdomCustomStr = class
+  protected
+    function getWideChars(indx: integer): wideChar; virtual;
+    procedure setWideChars(indx: integer;
+                           ch: wideChar); virtual;
+  public
+    constructor create;
+    procedure addWideChar(const ch: wideChar); virtual;
+    procedure addWideString(const s: wideString); virtual;
+    function  endsWith(const s: wideString): boolean; virtual;
+    function  isEqual(const s: wideString): boolean; virtual;
+    procedure reset; virtual;
+    function  startsWith(const s: wideString): boolean; virtual;
+    function  value: wideString; virtual;
+              // Since calling the value function involves time
+              // consuming string copying, always use one of the
+              // other TdomCustomStr access functions, if possible,
+              // e.g. wideChars[indx] instead of value[indx],
+              // isEqual[s] instead of (value = s), or
+              // length instead of length(value).
+    property  length: integer;
+    property  wideChars[indx: integer]: wideChar; default;
+  end;
+
+  TdomWideStringStream = class(TStream)
+  protected
+    procedure setCapacity(newCapacity: longint); virtual;
+    procedure setSize(newSize: longint); override;
+    procedure setStringPosition(value: longint);
+    function getStringPosition: longint;
+    procedure setStringLength(value: longint);
+    function getStringLength: longint;
+    function getDataString: wideString;
+  public
+    constructor createFromString(const aString: WideString);
+    destructor destroy; override;
+    function read(var buffer; count: longint): longint; override;
+    function readString(count: longint): wideString;
+    function seek(offset: longint; origin: word): longint; override;
+    function write(const buffer; count: longint): longint; override;
+    procedure writeString(const aString: wideString);
+    property capacity: longint;
+    property stringLength: longint;
+    property stringPosition: longint;
+    property dataString: wideString;
+  end;
+
+  EConversionStream = class(EStreamError);
+
+  TConversionStream = class(TStream)
+  protected
+    function convertReadBuffer(const buffer; count: longint): longint; virtual;
+    function convertWriteBuffer(const buffer; count: longint): longint; virtual;
+    procedure setConvertBufSize(newSize: longint); virtual;
+  public
+    constructor create(target: TStream);
+    destructor destroy; override;
+    function read(var buffer; count: longint): longint; override;
+    function write(const buffer; count: longint): longint; override;
+    function seek(offset: longint; origin: word): longint; override;
+    procedure freeConvertBuffer;
+    property target: TStream;
+    property convertBufP: pointer;
+    property convertCount: longint;
+    property convertBufSize: longint;
+  end;
+
+  TUTF16BEToUTF8Stream = class(TConversionStream)
+  protected
+    function convertWriteBuffer(const buffer; count: longint): longint; override;
+  public
+    property expandLF: boolean;
+  end;
+
+  TdomCMNodeList = class;
+  TdomCMObject = class;
+  TdomCMEntity = class;
+  TdomCMExternalObject = class;
+  TdomCMInternalObject = class;
+
+  TdomCustomErrorHandler = class;
+
+  TXmlParserAction = (paFail,paRetry,paOK);
+
+  TXmlParserEvent = procedure(      sender: TObject;
+                              const parentSystemId: wideString;
+                                var publicId,
+                                    systemId: wideString;
+                                var stream: TStream;
+                                var action: TXmlParserAction) of object;
+
+  TDomImplementation = class (TComponent)
+  public
+    constructor create(aOwner: TComponent); override;
+    destructor destroy; override;
+    procedure clear; virtual;
+    procedure freeCMExternalObject(var arg: TdomCMExternalObject); virtual;
+    procedure freeCMInternalObject(var arg: TdomCMInternalObject); virtual;
+    procedure freeCMObject(var arg: TdomCMObject); virtual;
+    procedure freeDocument(var doc: TdomDocument); virtual;
+    procedure freeDocumentType(var docType: TdomDocumentType); virtual;
+    function hasFeature(const feature,
+                              version: wideString): boolean; virtual;
+    function createCMExternalObject(const pubId,
+                                          sysId: wideString): TdomCMExternalObject; virtual;
+    function createCMInternalObject(const pubId,
+                                          sysId: wideString): TdomCMInternalObject; virtual;
+    function createCMObject: TdomCMObject; virtual;
+    function createDocument(const name: wideString;
+                                  doctype: TdomDocumentType): TdomDocument; virtual;
+    function createDocumentNS(const namespaceURI,
+                                    qualifiedName: WideString;
+                                    doctype: TdomDocumentType): TdomDocument; virtual;
+
+{
+  The following two methods have been removed from this version of
+  the XDOM, but will be reintroduced in a further release.
+
+    function createDocumentType(const name,
+                                      publicId,
+                                      systemId,
+                                      intSubset: WideString): TdomDocumentType; virtual;
+    function createDocumentTypeNS(const qualifiedName,
+                                        publicId,
+                                        systemId,
+                                        intSubset: WideString): TdomDocumentType; virtual;
+}
+
+    function getDocumentClass(const aNamespaceUri,
+                                    aQualifiedName: wideString): TdomDocumentClass; virtual;
+    class procedure registerDocumentFormat(const aNamespaceUri,
+                                                 aQualifiedName: wideString;
+                                                 aDocumentClass: TdomDocumentClass); virtual;
+    function supportsDocumentFormat(const aNamespaceUri,
+                                          aQualifiedName: wideString): boolean; virtual;
+    class procedure unregisterDocumentClass(const aDocumentClass: TdomDocumentClass); virtual;
+    property cmExternalObjects: TdomCMNodeList;
+    property cmInternalObjects: TdomCMNodeList;
+    property cmObjects: TdomCMNodeList;
+    property documents: TdomNodeList;
+    property documentTypes: TdomNodeList;
+  published
+    property onExternalParsedEntity: TXmlParserEvent;
+  end;
+
+  TdomNodeFilter = class
+  public
+    function acceptNode(const n: TdomNode): TdomFilterResult; virtual; abstract;
+  end;
+
+  TdomTreeWalker = class
+  protected
+    function getCurrentNode: TdomNode; virtual;
+    procedure setCurrentNode(const node: TdomNode); virtual;
+    function findNextSibling(const oldNode: TdomNode): TdomNode; virtual;
+    function findPreviousSibling(const oldNode: TdomNode): TdomNode; virtual;
+    function findParentNode(const oldNode: TdomNode): TdomNode; virtual;
+    function findFirstChild(const oldNode: TdomNode): TdomNode; virtual;
+    function findLastChild(const oldNode: TdomNode): TdomNode; virtual;
+    function findNextNode(oldNode: TdomNode): TdomNode; virtual;
+    function findPreviousNode(const oldNode: TdomNode): TdomNode; virtual;
+  public
+    constructor create(const root: TdomNode;
+                       const whatToShow: TdomWhatToShow;
+                       const nodeFilter: TdomNodeFilter;
+                       const entityReferenceExpansion: boolean); virtual;
+    function parentNode: TdomNode; virtual;
+    function firstChild: TdomNode; virtual;
+    function lastChild: TdomNode; virtual;
+    function previousSibling: TdomNode; virtual;
+    function nextSibling: TdomNode; virtual;
+    function nextNode: TdomNode; virtual;
+    function previousNode: TdomNode; virtual;
+    property currentNode: TdomNode;
+    property expandEntityReferences: boolean;
+    property filter: TdomNodeFilter;
+    property root: TdomNode;
+    property whatToShow: TdomWhatToShow;
+  end;
+
+  TdomPosition = (posBefore,posAfter);
+
+  TdomNodeIterator = class
+  protected
+    procedure findNewReferenceNode(const nodeToRemove: TdomNode); virtual; // To be called if the current FReferenceNode is being removed
+    function findNextNode(oldNode: TdomNode): TdomNode; virtual;
+    function findPreviousNode(const oldNode: TdomNode): TdomNode; virtual;
+  public
+    constructor create(const root: TdomNode;
+                       const whatToShow: TdomWhatToShow;
+                       const nodeFilter: TdomNodeFilter;
+                       const entityReferenceExpansion: boolean); virtual;
+    procedure detach; virtual;
+    function nextNode: TdomNode; virtual;
+    function previousNode: TdomNode; virtual;
+    property expandEntityReferences: boolean;
+    property filter: TdomNodeFilter;
+    property root: TdomNode;
+    property whatToShow: TdomWhatToShow;
+  end;
+
+  TdomNodeList = class
+  protected
+    function getLength: integer; virtual;
+    function indexOf(const node: TdomNode): integer; virtual;
+  public
+    constructor create(const nodeList: TList);
+    function item(const index: integer): TdomNode; virtual;
+    property length: integer;
+  end;
+
+  TdomElementsNodeList = class(TdomNodeList)
+  protected
+    function getLength: integer; override;
+  public
+    function indexOf(const node: TdomNode): integer; override;
+    function item(const index: integer): TdomNode; override;
+    constructor create(const queryName: wideString;
+                       const startElement: TdomNode); virtual;
+  end;
+
+  TdomElementsNodeListNS = class(TdomNodeList)
+  protected
+    function getLength: integer; override;
+  public
+    function indexOf(const node: TdomNode): integer; override;
+    function item(const index: integer): TdomNode; override;
+    constructor create(const queryNamespaceURI,
+                             queryLocalName: wideString;
+                       const startElement: TdomNode); virtual;
+  end;
+
+  TdomSpecialNodeList = class(TdomNodeList)
+  protected
+    FAllowedNodeTypes: TDomNodeTypeSet;
+    function getLength: integer; override;
+    function getNamedIndex(const name: WideString): integer; virtual;
+    function getNamedItem(const name: WideString): TdomNode; virtual;
+  public
+    function indexOf(const node: TdomNode): integer; override;
+    function item(const index: integer): TdomNode; override;
+    constructor create(const nodeList: TList;
+                       const allowedNTs: TDomNodeTypeSet); virtual;
+  end;
+
+  TdomNamedNodeMap = class(TdomNodeList)
+  protected
+    FAllowedNodeTypes: TDomNodeTypeSet;
+    function getNamedIndex(const name: WideString): integer; virtual;
+    function removeItem(const arg: TdomNode): TdomNode; virtual;
+    procedure setIsReadonly(const value: boolean); virtual;
+  public
+    constructor create(const aOwner,
+                             aOwnerNode: TdomNode;
+                       const nodeList: TList;
+                       const allowedNTs: TDomNodeTypeSet); virtual;
+    function getNamedItem(const name: WideString): TdomNode; virtual;
+    function setNamedItem(const arg: TdomNode): TdomNode; virtual;
+    function removeNamedItem(const name: WideString): TdomNode; virtual;
+    function getNamedItemNS(const namespaceURI,
+                                  localName: WideString): TdomNode; virtual;
+    function setNamedItemNS(const arg: TdomNode): TdomNode; virtual;
+    function removeNamedItemNS(const namespaceURI,
+                                     localName: WideString): TdomNode; virtual;
+    property isReadonly: boolean;
+    property namespaceAware: boolean;
+    property ownerNode: TdomNode;
+  end;
+
+  TdomEntitiesNamedNodeMap = class(TdomNamedNodeMap)
+  public
+    function setNamedItem(const arg: TdomNode): TdomNode; override;
+    function removeNamedItem(const name: WideString): TdomNode; override;
+    function setNamedItemNS(const arg: TdomNode): TdomNode; override;
+    function removeNamedItemNS(const namespaceURI,
+                                     localName: WideString): TdomNode; override;
+  end;
+
+  TdomNode = class
+  protected
+    FAllowedChildTypes: set of TDomNodeType;
+    FLocalName: wideString;
+    FNamespaceURI: wideString;
+    FPrefix: wideString;
+    procedure setIsReadonly(const value: boolean); virtual;
+    procedure setPrefix(const value: wideString); virtual;
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; virtual;
+    function validateIDREFS(const errorHandler: TdomCustomErrorHandler): boolean; virtual;
+  public
+    constructor create(const aOwner: TdomDocument);
+    destructor destroy; override;
+    function  appendChild(const newChild: TdomNode): TdomNode; virtual;
+    procedure clear; virtual;
+    function  cloneNode(const deep: boolean): TdomNode; virtual;
+    function  getFirstChildElement(const name: wideString): TdomElement; virtual;
+    function  getFirstChildElementNS(const namespaceURI,
+                                           localName: WideString): TdomElement; virtual;
+    function  getLastChildElement(const name: wideString): TdomElement; virtual;
+    function  getLastChildElementNS(const namespaceURI,
+                                          localName: WideString): TdomElement; virtual;
+    function  getNextSiblingElement(const name: wideString): TdomElement; virtual;
+    function  getNextSiblingElementNS(const namespaceURI,
+                                            localName: WideString): TdomElement; virtual;
+    function  getParentElement(const name: wideString): TdomElement; virtual;
+    function  getParentElementNS(const namespaceURI,
+                                       localName: WideString): TdomElement; virtual;
+    function  getPreviousSiblingElement(const name: wideString): TdomElement; virtual;
+    function  getPreviousSiblingElementNS(const namespaceURI,
+                                                localName: WideString): TdomElement; virtual;
+    function  hasChildNodes: boolean; virtual;
+    function  insertBefore(const newChild,
+                                 refChild: TdomNode): TdomNode; virtual;
+    function  isAncestor(const AncestorNode: TdomNode): boolean; virtual;
+    procedure normalize; virtual;
+    function  removeChild(const oldChild: TdomNode): TdomNode; virtual;
+    function  replaceChild(const newChild,
+                                 oldChild: TdomNode): TdomNode; virtual;
+    function  resolveEntityReferences(const opt: TdomEntityResolveOption): boolean; virtual;
+    function  supports(const feature,
+                             version: wideString): boolean; virtual;
+    procedure writeCode(Stream: TStream); virtual;
+    property attributes: TdomNamedNodeMap;
+    property childNodes: TdomNodeList;
+    property code: wideString;
+    property firstChild: TdomNode;
+    property isReadonly: boolean;
+    property lastChild: TdomNode;
+    property localName: wideString;
+    property namespaceURI: wideString;
+    property nextSibling: TdomNode;
+    property nodeName: wideString;
+    property nodeType: TdomNodeType;
+    property nodeValue: wideString;
+    property ownerDocument: TdomDocument;
+    property parentNode: TdomNode;
+    property previousSibling: TdomNode;
+    property prefix: wideString;
+    property textContent: wideString;
+  end;
+
+  TdomCharacterData = class (TdomNode)
+  public
+    constructor create(const aOwner: TdomDocument); virtual;
+    function substringData(const offset,
+                                 count: integer): wideString; virtual;
+    procedure appendData(const arg: wideString); virtual;
+    procedure insertData(const offset: integer;
+                         const arg: wideString); virtual;
+    procedure deleteData(const offset,
+                               count: integer); virtual;
+    procedure replaceData(const offset,
+                                count: integer;
+                          const arg: wideString); virtual;
+    property data: wideString;
+    property length: integer;
+  end;
+
+  TdomAttr = class (TdomNode)
+  protected
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+    function validateIDREFS(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const name: wideString;
+                       const spcfd: boolean);
+    constructor createNS(const aOwner: TdomDocument;
+                         const namespaceURI,
+                               qualifiedName: wideString;
+                         const spcfd: boolean);
+    procedure normalize; override;
+    function  resolveEntityReferences(const opt: TdomEntityResolveOption): boolean; override;
+    procedure writeCode(stream: TStream); override;
+    property literalValue: wideString;
+    property name: wideString;
+    property ownerElement: TdomElement;
+    property specified: boolean;
+    property value: wideString;
+  end;
+
+  TdomElement = class (TdomNode)
+  protected
+    procedure setIsReadonly(const value: boolean); override;
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+    function validateIDREFS(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const tagName: wideString);
+    constructor createNS(const aOwner: TdomDocument;
+                         const namespaceURI,
+                               qualifiedName: wideString);
+    destructor destroy; override;
+    function getTagName: wideString; virtual;
+    function getAttributes: TdomNamedNodeMap; override;
+    function getAttribute(const name: wideString): wideString; virtual;
+    function setAttribute(const name,
+                                value: wideString): TdomAttr; virtual;
+    function removeAttribute(const name: wideString): TdomAttr; virtual;
+    function getAttributeNode(const name: wideString): TdomAttr; virtual;
+    function setAttributeNode(const newAttr: TdomAttr): TdomAttr; virtual;
+    function removeAttributeNode(const oldAttr: TdomAttr): TdomAttr; virtual;
+    function resolveEntityReferences(const opt: TdomEntityResolveOption): boolean; override;
+    function getElementsByTagName(const name: wideString): TdomNodeList; virtual;
+    function getAttributeNS(const namespaceURI,
+                                  localName: wideString): wideString; virtual;
+    function setAttributeNS(const namespaceURI,
+                                  qualifiedName,
+                                  value: wideString): TdomAttr; virtual;
+    function removeAttributeNS(const namespaceURI,
+                                     localName: wideString): TdomAttr; virtual;
+    function getAttributeNodeNS(const namespaceURI,
+                                      localName: wideString): TdomAttr; virtual;
+    function setAttributeNodeNS(const newAttr: TdomAttr): TdomAttr; virtual;
+    function getElementsByTagNameNS(const namespaceURI,
+                                          localName: wideString): TdomNodeList; virtual;
+    function hasAttribute(const name: wideString): boolean; virtual;
+    function hasAttributeNS(const namespaceURI,
+                                  localName: wideString): boolean; virtual;
+    procedure normalize; override;
+    procedure writeCode(Stream: TStream); override;
+    property tagName: wideString;
+  end;
+
+  TdomText = class (TdomCharacterData)
+  protected
+    function getIsWhitespaceInElementContent: boolean; virtual;
+    function getLiteralValue: wideString; virtual;
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument); override;
+    function splitText(const offset: integer): TdomText; virtual;
+    procedure writeCode(stream: TStream); override;
+    property isWhitespaceInElementContent: boolean;
+    property literalValue: wideString;
+  end;
+
+  TdomComment = class (TdomCharacterData)
+  protected
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument); override;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomProcessingInstruction = class (TdomNode)
+  protected
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const targ: wideString); virtual;
+    procedure writeCode(Stream: TStream); override;
+    property target: wideString;
+    property data: wideString;
+  end;
+
+  TdomCDATASection = class (TdomText)
+  protected
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument); override;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomDocumentType = class (TdomNode)
+  protected  
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const name,
+                             pubId,
+                             sysId,
+                             intSubset: wideString); virtual;
+    destructor  destroy; override;
+    procedure writeCode(stream: TStream); override;
+    property entities: TdomEntitiesNamedNodeMap;
+    property internalSubset: wideString;
+    property name: wideString;
+    property notations: TdomNamedNodeMap;
+    property publicId: wideString;
+    property systemId: wideString;
+  end;
+
+  TdomNotation = class (TdomNode)
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const name,
+                             pubId,
+                             sysId: wideString); virtual;
+    property publicId: wideString;
+    property systemId: wideString;
+  end;
+
+  TdomEntity = class (TdomNode)
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const name,
+                             pubId,
+                             sysId,
+                             notaName: wideString); virtual;
+    function insertBefore(const newChild,
+                                refChild: TdomNode): TdomNode; override;
+    function replaceChild(const newChild,
+                                oldChild: TdomNode): TdomNode; override;
+    function appendChild(const newChild: TdomNode): TdomNode; override;
+    property encoding: wideString;
+    property isInternalEntity: boolean;
+    property notationName: wideString;
+    property publicId: wideString;
+    property systemId: wideString;
+    property version: wideString;
+  end;
+
+  TdomEntityReference = class (TdomNode)
+  protected
+    function expand: boolean; virtual;
+    function validate2(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomDocument;
+                       const name: wideString); virtual;
+    function cloneNode(const deep: boolean): TdomNode; override;
+    function  resolveEntityReferences(const opt: TdomEntityResolveOption): boolean; override;
+    procedure writeCode(stream: TStream); override;
+    property correspondingCMEntity: TdomCMEntity;
+    property refersToPredefinedEntity: boolean;
+  end;
+
+  TdomDocumentFragment = class (TdomNode)
+  public
+    constructor create(const aOwner: TdomDocument); virtual;
+  end;
+
+  TdomDocument = class (TdomNode)
+  protected
+    function createEntity(const name,
+                                pubId,
+                                sysId,
+                                notaName: wideString): TdomEntity; virtual;
+    function createNotation(const name,
+                                  pubId,
+                                  sysId: wideString): TdomNotation; virtual;
+    function duplicateNode(const sourceNode: TdomNode;
+                           const deep: boolean): TdomNode; virtual;
+    procedure initDoc(const tagName: wideString); virtual;
+    procedure initDocNS(const namespaceURI,
+                              qualifiedName: wideString); virtual;
+    function validateIDREFS(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TDomImplementation); virtual;
+    destructor destroy; override;
+    procedure clear; override;
+    procedure clearInvalidNodeIterators; virtual;
+    function createElement(const tagName: wideString): TdomElement; virtual;
+    function createElementNS(const namespaceURI,
+                                   qualifiedName: wideString): TdomElement; virtual;
+    function createDocumentFragment: TdomDocumentFragment; virtual;
+    function createTextNode(const data: wideString): TdomText; virtual;
+    function createComment(const data: wideString): TdomComment; virtual;
+    function createCDATASection(const data: wideString): TdomCDATASection; virtual;
+    function createProcessingInstruction(const targ,
+                                               data : wideString): TdomProcessingInstruction; virtual;
+    function createAttribute(const name: wideString): TdomAttr; virtual;
+    function createAttributeNS(const namespaceURI,
+                                     qualifiedName: wideString): TdomAttr; virtual;
+    function createEntityReference(const name: wideString): TdomEntityReference; virtual;
+    function createDocumentType(const name,
+                                      pubId,
+                                      sysId,
+                                      intSubset: wideString): TdomDocumentType; virtual;
+    procedure freeAllNodes(var node: TdomNode); virtual;
+    procedure freeTreeWalker(var treeWalker: TdomTreeWalker); virtual;
+    function getElementById(const elementId: wideString): TdomElement; virtual;
+    function getElementsByTagName(const tagName: wideString): TdomNodeList; virtual;
+    function getElementsByTagNameNS(const namespaceURI,
+                                          localName: wideString): TdomNodeList; virtual;
+    function importNode(const importedNode: TdomNode;
+                        const deep: boolean): TdomNode; virtual;
+    function insertBefore(const newChild,
+                                refChild: TdomNode): TdomNode; override;
+    function replaceChild(const newChild,
+                                oldChild: TdomNode): TdomNode; override;
+    function appendChild(const newChild: TdomNode): TdomNode; override;
+    function createNodeIterator(const root: TdomNode;
+                                      whatToShow: TdomWhatToShow;
+                                      nodeFilter: TdomNodeFilter;
+                                      entityReferenceExpansion: boolean): TdomNodeIterator; virtual;
+    function createTreeWalker(const root: TdomNode;
+                                    whatToShow: TdomWhatToShow;
+                                    nodeFilter: TdomNodeFilter;
+                                    entityReferenceExpansion: boolean): TdomTreeWalker; virtual;
+    function removeContentModel: TdomCMObject; virtual;
+    function setContentModel(const arg: TdomCMObject): TdomCMObject; virtual;
+    function validate(const errorHandler: TdomCustomErrorHandler;
+                      const opt: TdomEntityResolveOption): boolean; virtual;
+    procedure writeCode(stream: TStream); override;
+    procedure writeCodeAsUTF8(stream: TStream); virtual;
+    procedure writeCodeAsUTF16(stream: TStream); virtual;
+    property codeAsString: string;
+    property codeAsWideString: wideString;
+    property contentModel: TdomCMObject;
+    property defaultView: TdomAbstractView read FDefaultView;
+    property doctype: TdomDocumentType;
+    property documentElement: TdomElement;
+    property domImplementation: TdomImplementation;
+    property encoding: wideString;
+    property IDs: TStringList;
+    property standalone: wideString;
+    property systemId: wideString;
+    property version: wideString;
+  end;
+
+
+// Content Model
+
+  TdomCMNodeType = (ctUnknown,
+                    ctProcessingInstruction,
+                    ctComment,
+                    ctObject,
+                    ctFragment,
+                    ctExternalObject,
+                    ctInternalObject,
+                    ctAttribute,
+                    ctNotation,
+                    ctEntity,
+                    ctParameterEntity,
+                    ctParameterEntityReference,
+                    ctEntityDeclaration,
+                    ctParameterEntityDeclaration,
+                    ctElementTypeDeclaration,
+                    ctSequenceParticle,
+                    ctChoiceParticle,
+                    ctPcdataChoiceParticle,
+                    ctElementParticle,
+                    ctAttributeList,
+                    ctAttributeDefinition,
+                    ctNotationDeclaration,
+                    ctNameParticle,
+                    ctNmtokenParticle);
+
+  TdomCMNodeTypeSet = set of TdomCMNodeType;
+
+  TdomCMNode = class;
+  TdomCustomCMObject = class;
+  TdomCMParameterEntityReference = class;
+  TdomCMEntityDeclaration = class;
+  TdomCMElementParticle = class;
+  TdomCMNameParticle = class;
+  TdomCMNmtokenParticle = class;
+  TdomCMElementTypeDeclaration = class;
+  TdomCMParameterEntityDeclaration = class;
+  TdomCMFragment = class;
+  TdomCMNotationDeclaration = class;
+  TdomCMAttrDefinition = class;
+  TdomCMAttrList = class;
+  TdomCMChoiceParticle = class;
+  TdomCMAttribute = class;
+  TdomCMNotation = class;
+  TdomCMParameterEntity = class;
+  TdomCMPcdataChoiceParticle = class;
+  TdomCMSequenceParticle = class;
+
+  TdomStandardErrorHandler = class;
+
+  TdomCMNodeList = class
+  protected
+    function indexOf(const node: TdomCMNode): integer; virtual;
+  public
+    function item(const index: integer): TdomCMNode; virtual;
+    constructor create(const CMNodeList: TList);
+    property length: integer;
+  end;
+
+  TdomNamedCMNodeMap = class(TdomCMNodeList)
+  protected
+    FAllowedNodeTypes: TDomCMNodeTypeSet;
+    function getNamedIndex(const name: wideString): integer; virtual;
+    function removeItem(const arg: TdomCMNode): TdomCMNode; virtual;
+    procedure setIsReadonly(const value: boolean); virtual;
+  public
+    constructor create(const aOwner,
+                             aOwnerNode: TdomCMNode;
+                       const nodeList: TList;
+                       const allowedNTs: TDomCMNodeTypeSet); virtual;
+    function getNamedItem(const name: wideString): TdomCMNode; virtual;
+    function setNamedItem(const arg: TdomCMNode): TdomCMNode; virtual;
+    function removeNamedItem(const name: wideString): TdomCMNode; virtual;
+    property isReadonly: boolean;
+    property ownerNode: TdomCMNode;
+  end;
+
+  TdomNamedCMAttributeMap = class
+  public
+    constructor create(const aOwner: TdomCMObject);
+    destructor destroy; override;
+    function item(const index: integer): TdomCMAttribute; virtual;
+    function getNamedItem(const elementName,
+                                attributeName: wideString): TdomCMAttribute; virtual;
+    function appendNamedItem(const arg: TdomCMAttribute): boolean; virtual;
+    function removeLastItem: TdomCMAttribute; virtual;
+    property length: integer;
+    property ownerContentModel: TdomCMObject;
+  end;
+
+  TdomNamedCMEntityMap = class
+  public
+    constructor create(const aOwner: TdomCMObject);
+    destructor destroy; override;
+    function item(const index: integer): TdomCMEntity; virtual;
+    function getNamedItem(const name: wideString): TdomCMEntity; virtual;
+    function appendNamedItem(const arg: TdomCMEntity): boolean; virtual;
+    function removeLastItem: TdomCMEntity; virtual;
+    property length: integer;
+    property ownerContentModel: TdomCMObject;
+  end;
+
+  TdomCMNode = class
+  protected
+    FAllowedChildTypes: set of TDomCMNodeType;
+    procedure setIsReadonly(const value: boolean); virtual;
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; virtual;
+  public
+    constructor create(const aOwner: TdomCustomCMObject);
+    destructor destroy; override;
+    procedure clear; virtual;
+    function insertBefore(const newChild,
+                                refChild: TdomCMNode): TdomCMNode; virtual;
+    function replaceChild(const newChild,
+                                oldChild: TdomCMNode): TdomCMNode; virtual;
+    function removeChild(const oldChild: TdomCMNode): TdomCMNode; virtual;
+    function appendChild(const newChild: TdomCMNode): TdomCMNode; virtual;
+    function hasChildNodes: boolean; virtual;
+    function cloneNode(const deep: boolean): TdomCMNode; virtual;
+    function isAncestor(const ancestorNode: TdomCMNode): boolean; virtual;
+    procedure writeCode(stream: TStream); virtual;
+    property childNodes: TdomCMNodeList;
+    property code: wideString;
+    property firstChild: TdomCMNode;
+    property isReadonly: boolean;
+    property lastChild: TdomCMNode;
+    property nextSibling: TdomCMNode;
+    property nodeName: wideString;
+    property nodeType: TdomCMNodeType;
+    property nodeValue: wideString;
+    property ownerCMObject: TdomCustomCMObject;
+    property parentNode: TdomCMNode;
+    property previousSibling: TdomCMNode;
+  end;
+
+  TdomCMComment = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject); virtual;
+    function substringData(const offset,
+                                 count: integer):wideString; virtual;
+    procedure appendData(const arg: wideString); virtual;
+    procedure insertData(const offset: integer;
+                         const arg: wideString); virtual;
+    procedure deleteData(const offset,
+                               count: integer); virtual;
+    procedure replaceData(const offset,
+                                count: integer;
+                          const arg: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+    property data: wideString;
+    property length: integer;
+  end;
+
+  TdomCMProcessingInstruction = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const targ: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+    property target: wideString;
+    property data: wideString;
+  end;
+
+  TdomCustomCMObject = class (TdomCMNode)
+  protected
+    function duplicateCMNode(const node: TdomCMNode): TdomCMNode; virtual;
+  public
+    constructor create(const aOwner: TdomImplementation);
+    destructor destroy; override;
+    function createCMAttributeDefinition(const name,
+                                               attType,
+                                               defaultDecl,
+                                               attValue: wideString) : TdomCMAttrDefinition; virtual;
+    function createCMAttributeList(const name: wideString): TdomCMAttrList; virtual;
+    function createCMChoiceParticle(const freq: wideString): TdomCMChoiceParticle; virtual;
+    function createCMComment(const data: wideString): TdomCMComment; virtual;
+    function createCMElementParticle(const name,
+                                           freq: wideString): TdomCMElementParticle; virtual;
+    function createCMElementTypeDeclaration(const name: wideString;
+                                            const ContspecType: TdomContentspecType): TdomCMElementTypeDeclaration; virtual;
+    function createCMEntityDeclaration(const name,
+                                             entityValue,
+                                             pubId,
+                                             sysId,
+                                             notaName: wideString): TdomCMEntityDeclaration; virtual;
+    function createCMFragment: TdomCMFragment; virtual;
+    function createCMNameParticle(const name: wideString): TdomCMNameParticle; virtual;
+    function createCMNmtokenParticle(const name: wideString): TdomCMNmtokenParticle; virtual;
+    function createCMNotationDeclaration(const name,
+                                               pubId,
+                                               sysId: wideString): TdomCMNotationDeclaration; virtual;
+    function createCMParameterEntityDeclaration(const name,
+                                                      entityValue,
+                                                      pubId,
+                                                      sysId: wideString): TdomCMParameterEntityDeclaration; virtual;
+    function createCMParameterEntityReference(const name: wideString): TdomCMParameterEntityReference; virtual;
+    function createCMPcdataChoiceParticle: TdomCMPcdataChoiceParticle; virtual;
+    function createCMProcessingInstruction(const targ,
+                                                 data : wideString): TdomCMProcessingInstruction; virtual;
+    function createCMSequenceParticle(const freq: wideString): TdomCMSequenceParticle; virtual;
+    procedure freeAllCMNodes(var CMNode: TdomCMNode); virtual;
+    property domImplementation: TdomImplementation;
+  end;
+
+  TdomCMObject = class (TdomCustomCMObject)
+  protected
+    procedure prepareCM(const errorHandler: TdomCustomErrorHandler); virtual;
+    function duplicateCMNode(const node: TdomCMNode): TdomCMNode; override;
+    function createCMAttribute(const elementName,
+                                     attributeName,
+                                     attType,
+                                     defaultDecl,
+                                     attValue: wideString): TdomCMAttribute; virtual;
+    function createCMEntity(const name,
+                                  literalValue,
+                                  pubId,
+                                  sysId,
+                                  versionNumber,
+                                  notaName: wideString): TdomCMEntity; virtual;
+    function createCMNotation(const name,
+                                    pubId,
+                                    sysId: wideString): TdomCMNotation; virtual;
+    function createCMParameterEntity(const name,
+                                           value,
+                                           pubId,
+                                           sysId,
+                                           versionNumber: wideString): TdomCMParameterEntity;
+    function setPredefinedEntities(const errorHandler: TdomCustomErrorHandler): boolean; virtual;
+  public
+    constructor create(const aOwner: TdomImplementation); virtual;
+    destructor destroy; override;
+    procedure clear; override;
+    procedure prepare; virtual;
+    function removeExternalCM: TdomCMExternalObject; virtual;
+    function removeInternalCM: TdomCMInternalObject; virtual;
+    function setExternalCM(const arg: TdomCMExternalObject): TdomCMExternalObject; virtual;
+    function setInternalCM(const arg: TdomCMInternalObject): TdomCMInternalObject; virtual;
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+    property associatedDocument: TdomDocument;
+    property attributes: TdomNamedCMAttributeMap;
+    property elementTypes: TdomNamedCMNodeMap;
+    property entities: TdomNamedCMEntityMap;
+    property notations: TdomNamedCMNodeMap;
+    property parameterEntities: TdomNamedCMNodeMap;
+    property externalCM: TdomCMExternalObject;
+    property internalCM: TdomCMInternalObject;
+  end;
+
+  TdomCustomCMIEObject = class (TdomCustomCMObject)
+  protected
+    FAssociatedContentModel: TdomCMObject;
+    FPublicId: wideString;
+    FSystemId: wideString;
+    FParameterEntitiesList: TdomNameValueList;
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomImplementation;
+                       const pubId,
+                             sysId: wideString);
+    destructor destroy; override;
+    property associatedContentModel: TdomCMObject;
+    property publicId: wideString;
+    property systemId: wideString;
+  end;
+
+  TdomCMInternalObject = class (TdomCustomCMIEObject)
+  public
+    constructor create(const aOwner: TdomImplementation;
+                       const pubId,
+                             sysId: wideString);
+  end;
+
+  TdomCMExternalObject = class (TdomCustomCMIEObject)
+  protected
+    FEncoding: wideString;
+    FVersion: wideString;
+  public
+    constructor create(const aOwner: TdomImplementation;
+                       const pubId,
+                             sysId: wideString);
+    property encoding: wideString;
+    property version: wideString;
+  end;
+
+  TdomCMNotationDeclaration = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             pubId,
+                             sysId: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+    property publicId: wideString;
+    property systemId: wideString;
+  end;
+
+  TdomCMElementTypeDeclaration = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+    procedure writeContentspec(stream: TStream); virtual;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name: wideString;
+                       const contspecType: TdomContentspecType); virtual;
+    function appendChild(const newChild: TdomCMNode): TdomCMNode; override;
+    function insertBefore(const newChild,
+                                refChild: TdomCMNode): TdomCMNode; override;
+    procedure writeCode(stream: TStream); override;
+    property contentspec: wideString;
+    property contentspecType: TdomContentspecType;
+  end;
+
+  TdomCMAttrList = class(TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMAttrDefinition = class(TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             attType,
+                             defaultDecl,
+                             attValue: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+    property attributeType: wideString;
+    property defaultDeclaration: wideString read getDefaultDeclaration;
+  end;
+
+  TdomCMParticle = class (TdomCMNode)
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const freq: wideString);
+    property frequency: wideString;
+  end;
+
+  TdomCMSequenceParticle = class (TdomCMParticle)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const freq: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMChoiceParticle = class (TdomCMParticle)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const freq: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMPcdataChoiceParticle = class (TdomCMParticle)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const freq: wideString); virtual;
+    function elementDefined(const elementName: wideString): boolean;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMElementParticle = class (TdomCMParticle)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             freq: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMNameParticle = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMNmtokenParticle = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMAttribute = class (TdomCMNode)
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const elementName,
+                             attributeName,
+                             attType,
+                             defaultDecl,
+                             attValue: wideString); virtual;
+    property attributeName: wideString;
+    property attributeType: wideString;
+    property defaultDeclaration: wideString read FDefaultDeclaration;
+    property elementName: wideString;
+  end;
+
+  TdomCMNotation = class (TdomCMNode)
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             pubId,
+                             sysId: wideString); virtual;
+    property publicId: wideString;
+    property systemId: wideString;
+  end;
+
+  TdomCMEntity = class (TdomCMNode)
+  protected
+    function refersToExternalEntity(const allowUnresolvableEntities: boolean): boolean; virtual;
+    function refersToUnparsedEntity(const allowUnresolvableEntities: boolean): boolean; virtual;
+    function refersToUnusableEntity(const allowUnresolvableEntities: boolean): boolean; virtual;
+    procedure testForCircularReference(const allowUnresolvableEntities: boolean); virtual;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             literalValue,
+                             pubId,
+                             sysId,
+                             versionNumber,
+                             notaName: wideString); virtual;
+    property encoding: wideString;
+    property isInternalEntity: boolean;
+    property isParsedEntity: boolean;
+    property isUnusable: boolean default false;  // xxx default?
+    property literalValue: wideString;
+    property normalizedValue: wideString;
+    property notationName: wideString;
+    property publicId: wideString;
+    property replacementText: wideString;
+    property resolvedValue: wideString;
+    property systemId: wideString;
+    property version: wideString;
+  end;
+
+  TdomCMParameterEntity = class (TdomCMNode)
+  protected
+    function  getIsUnusable: boolean; virtual;
+    procedure setIsUnusable(const value: boolean); virtual;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             entityValue,
+                             pubId,
+                             sysId,
+                             versionNumber: wideString); virtual;
+    property encoding: wideString;
+    property isInternalEntity: boolean;
+    property isUnusable: boolean default false;
+    property publicId: wideString;
+    property systemId: wideString;
+    property version: wideString;
+  end;
+
+  TdomCustomCMEntDecl = class (TdomCMNode)
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             pubId,
+                             sysId: wideString);
+    function insertBefore(const newChild,
+                                refChild: TdomCMNode): TdomCMNode; override;
+    function replaceChild(const newChild,
+                                oldChild: TdomCMNode): TdomCMNode; override;
+    function appendChild(const newChild: TdomCMNode): TdomCMNode; override;
+    property publicId: wideString;
+    property systemId: wideString;
+    property isInternalEntity: boolean;
+  end;
+
+  TdomCMEntityDeclaration = class (TdomCustomCMEntDecl)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             entityValue,
+                             pubId,
+                             sysId,
+                             notaName: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+    property isParsedEntity: boolean;
+    property notationName: wideString;
+  end;
+
+  TdomCMParameterEntityDeclaration = class (TdomCustomCMEntDecl)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name,
+                             entityValue,
+                             pubId,
+                             sysId: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMParameterEntityReference = class (TdomCMNode)
+  protected
+    function validate(const errorHandler: TdomCustomErrorHandler): boolean; override;
+  public
+    constructor create(const aOwner: TdomCustomCMObject;
+                       const name: wideString); virtual;
+    procedure writeCode(stream: TStream); override;
+  end;
+
+  TdomCMFragment = class (TdomCMNode)
+  public
+    constructor create(const aOwner: TdomCustomCMObject); virtual;
+  end;
+
+
+// Views
+
+  TdomAbstractView = class
+  public
+    property document: TdomDocument;
+  end;
+
+  TdomStyleSheet = class
+  public
+    property styleSheetType: wideString;
+    property disabled: boolean;
+    property ownerNode: TdomNode;
+    property parentStyleSheet: TdomStyleSheet;
+    property href: wideString;
+    property title: wideString;
+    property media: TdomMediaList;
+  end;
+
+  TdomMediaList = class
+  public
+    function item(const index: integer): TdomStyleSheet; virtual; abstract;
+    procedure Delete(const oldMedium: wideString); virtual; abstract;
+    procedure append(const newMedium: wideString); virtual; abstract;
+    property length: integer;
+    property cssText: wideString;
+  end;
+
+  TdomStyleSheetList = class
+  public
+    function item(const index: integer): TdomStyleSheet; virtual; abstract;
+    property length: integer;
+  end;
+
+  TdomDocumentStyle = class
+  public
+    property styleSheets: TdomStyleSheetList;
+  end;
+
+  TXmlSourceCode = class (TList)
+  public
+    function  add(Item: Pointer): integer;
+    procedure clear;  override; 
+      // ifdef... is necessary because TList.clear is static in Delphi 3
+      // (=ver100), but dynamic in later versions.
+    procedure clearAndFree; virtual;
+    procedure Delete(index: integer);
+    procedure exchange(index1, index2: integer);
+    function  getPieceAtPos(pos: integer): TXmlSourceCodePiece;
+    procedure insert(index: integer; item: pointer);
+    procedure move(curIndex, newIndex: integer);
+    procedure pack;
+    function  remove(Item: Pointer): integer;
+    procedure sort(Compare: TListSortCompare);
+    property  nameOfFirstTag: wideString;
+  end;
+
+  TXmlSourceCodePiece = class
+  public
+    constructor create(const pt: TdomPieceType); virtual;
+    property pieceType: TdomPieceType;
+    property text: wideString;
+    property offset: integer;
+    property ownerSourceCode: TXmlSourceCode;
+  end;
+
+
+{Parser}
+
+  TXmlParserLanguage = (iso639_de,
+                        iso639_en,
+                        iso639_es,
+                        iso639_fr,
+                        iso639_it,
+                        iso639_nl,
+                        iso639_pl);
+
+  TXmlMemoryStream = class(TMemoryStream)
+  public
+    procedure setPointer(Ptr: Pointer; Size: Longint);
+  end;
+
+  TdomStandardLocator = class;
+  
+  TXmlInputSource = class
+  protected
+    function getEncodingType: TdomEncodingType; virtual;
+    function getRootName: wideString; virtual;
+    function getStreamAsWideString: wideString; virtual;
+    procedure skipTextDecl(const locator: TdomStandardLocator); virtual;
+    function getNextWideChar2(var dest: wideChar;
+                              const locator: TdomStandardLocator): boolean; virtual;
+    procedure reset2(const locator: TdomStandardLocator); virtual;
+  public
+    constructor create(const stream: TStream;
+                       const publicId,
+                             systemId: wideString); virtual;
+    destructor destroy; override;
+    function getNextWideChar(var dest: wideChar): boolean; virtual;
+    procedure reset; virtual;
+    property encoding: TdomEncodingType;
+    property locator: TdomStandardLocator;
+    property publicId: wideString;
+    property rootName: wideString;
+    property stream: TStream;
+    property streamAsWideString: wideString;
+    property systemId: wideString;
+  end;
+
+  TXmlErrorType = (xetFatalError,xetError,xetWarning);
+
+  TXmlParserError = class
+  protected
+    function getDutchErrorStr: wideString;
+    function getEnglishErrorStr: wideString;
+    function getFrenchErrorStr: wideString;
+    function getGermanErrorStr: wideString;
+    function getItalianErrorStr: wideString;
+    function getPolishErrorStr: wideString;
+    function getSpanishErrorStr: wideString;
+  public
+    constructor create(const e: EParserException;
+                       const startLine,
+                             startColumn,
+                             endLine,
+                             endColumn: integer;
+                       const pubId,
+                             sysId,
+                             code: wideString); virtual;
+    function getErrorStr(const lang: TXmlParserLanguage): wideString; virtual;
+    property code: wideString;
+    property endColumn: integer;
+    property endLine: integer;
+    property errorClass: string;
+    property errorType: TXmlErrorType;
+    property publicId: wideString;
+    property startColumn: integer;
+    property startLine: integer;
+    property systemId: wideString;
+  end;
+
+  TdomStandardLocator = class
+  protected
+    FColumnNumber:      integer;
+    FInputSource:       TXmlInputSource;
+    FStartColumnNumber: integer;
+    FStartLineNumber:   integer;
+    FLastWCharWasLF:    boolean;
+    FLineNumber:        integer;
+    FPieceEndSet:       boolean;
+    function getPublicId: wideString; virtual;
+    function getSystemId: wideString; virtual;
+    procedure evaluate(const s: WideChar); virtual;
+  public
+    constructor create(const inputSource: TXmlInputSource); virtual;
+    procedure pieceEnd; virtual;
+    procedure pieceStart; virtual;
+    procedure reset; virtual;
+    property columnNumber: integer;
+    property lineNumber: integer;
+    property publicId: wideString;
+    property startColumnNumber: integer;
+    property startLineNumber: integer;
+    property systemId: wideString;
+  end;
+
+  TdomCustomParser = class;
+  TXmlStandardDocReader = class;
+
+  TXmlCustomProcessorAgent = class(TComponent);
+
+  TXmlProcessorErrorEvent = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                      e: TXmlParserError) of object;
+
+  TXmlProcessorEvent1 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator) of object;
+
+  TXmlProcessorEvent2 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var data: wideString) of object;
+
+  TXmlProcessorEvent3 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var targ,
+                                      data : wideString) of object;
+
+  TXmlProcessorEvent4 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var namespaceURI,
+                                      tagName: wideString) of object;
+
+  TXmlProcessorEvent5 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var namespaceURI,
+                                      tagName: wideString;
+                                  attributes: TdomNameValueList) of object;
+
+  TXmlProcessorEvent6 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var name,
+                                      pubId,
+                                      sysId,
+                                      data: wideString) of object;
+
+  TXmlProcessorEvent7 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var prefix,
+                                      uri: wideString) of object;
+
+  TXmlProcessorEvent8 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var version,
+                                      encDl,
+                                      sdDl: wideString) of object;
+
+  TXmlProcessorEvent9 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                  locator: TdomStandardLocator;
+                                  var name,
+                                      attType,
+                                      bracket,
+                                      defaultDecl,
+                                      attValue: wideString) of object;
+
+  TXmlProcessorEvent10 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var includeStmt,
+                                       data: wideString) of object;
+
+  TXmlProcessorEvent11 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var name,
+                                       data: wideString) of object;
+
+  TXmlProcessorEvent12 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var name,
+                                       entityValue,
+                                       pubId,
+                                       sysId,
+                                       notaName: wideString) of object;
+
+  TXmlProcessorEvent13 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var name,
+                                       pubId,
+                                       sysId: wideString) of object;
+
+  TXmlProcessorEvent14 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var name,
+                                       entityValue,
+                                       pubId,
+                                       sysId: wideString) of object;
+
+  TXmlProcessorEvent15 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   var pubId,
+                                       sysId: wideString) of object;
+
+  TXmlProcessorEvent16 = procedure(processorAgent: TXmlCustomProcessorAgent;
+                                   locator: TdomStandardLocator;
+                                   var version,
+                                       encDl: wideString) of object;
+
+  TXmlStandardProcessorAgent = class(TXmlCustomProcessorAgent)
+  protected
+    FReader: TXmlStandardDocReader;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    function processFile(const pubId,
+                               sysId: wideString): boolean; virtual;
+    function processMemory(const ptr: pointer;
+                           const size: longint;
+                           const pubId,
+                                 sysId: wideString): boolean; virtual;
+    function processSourceCode(const intDtdSourceCode: TXmlSourceCode;
+                               const pubId,
+                                     sysId: wideString): boolean; virtual;
+    function processStream(const stream: TStream;
+                           const pubId,
+                                 sysId: wideString): boolean; virtual;
+    function processString(const str: String;
+                           const pubId,
+                                 sysId: wideString): boolean; virtual;
+    function processWideString(str: wideString;
+                               const pubId,
+                                     sysId: wideString): boolean; virtual;
+  published
+    property Reader: TXmlStandardDocReader;
+  end;
+
+  TXmlCustomHandler = class(TComponent)
+  protected
+    FOnError: TXmlProcessorErrorEvent;
+    FOnFatalError: TXmlProcessorErrorEvent;
+    FOnWarning: TXmlProcessorErrorEvent;
+    FOnComment: TXmlProcessorEvent2;
+    FOnCDATA: TXmlProcessorEvent2;
+    FOnCharRef: TXmlProcessorEvent2;
+    FOnDoctype: TXmlProcessorEvent6;
+    FOnEndDocument: TXmlProcessorEvent1;
+    FOnEndElement: TXmlProcessorEvent4;
+    FOnEndPrefixMapping: TXmlProcessorEvent2;
+    FOnEntityRef: TXmlProcessorEvent2;
+    FOnPCDATA: TXmlProcessorEvent2;
+    FOnProcessingInstruction: TXmlProcessorEvent3;
+    FOnSkippedEntity: TXmlProcessorEvent2;
+    FOnStartDocument: TXmlProcessorEvent2;
+    FOnStartElement: TXmlProcessorEvent5;
+    FOnStartPrefixMapping: TXmlProcessorEvent7;
+    FOnXmlDeclaration: TXmlProcessorEvent8;
+    FOnAttributeDefinition: TXmlProcessorEvent9;
+    FOnConditionalSection: TXmlProcessorEvent10;
+    FOnDtdComment: TXmlProcessorEvent2;
+    FOnDtdProcessingInstruction: TXmlProcessorEvent3;
+    FOnElementTypeDeclaration: TXmlProcessorEvent11;
+    FOnEndAttListDeclaration: TXmlProcessorEvent1;
+    FOnEndDtd: TXmlProcessorEvent1;
+    FOnEntityDeclaration: TXmlProcessorEvent12;
+    FOnNotationDeclaration: TXmlProcessorEvent13;
+    FOnParameterEntityDeclaration: TXmlProcessorEvent14;
+    FOnParameterEntityRef: TXmlProcessorEvent2;
+    FOnStartAttListDeclaration: TXmlProcessorEvent2;
+    FOnStartDtd: TXmlProcessorEvent15;
+    FOnTextDeclaration: TXmlProcessorEvent16;
+    procedure sendErrorNotification(const sender: TXmlCustomProcessorAgent;
+                                      var e: TXmlParserError); virtual;
+    procedure error(const sender: TXmlCustomProcessorAgent;
+                      var e: TXmlParserError); virtual;
+    procedure fatalError(const sender: TXmlCustomProcessorAgent;
+                           var e: TXmlParserError); virtual;
+    procedure warning(const sender: TXmlCustomProcessorAgent;
+                        var e: TXmlParserError); virtual;
+  public
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; virtual; abstract;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; virtual; abstract;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; virtual; abstract;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; virtual; abstract;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; virtual; abstract;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; virtual; abstract;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                                    prefix: wideString): TXmlParserError; virtual; abstract;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; virtual; abstract;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; virtual; abstract;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; virtual; abstract;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; virtual; abstract;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; virtual; abstract;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; virtual; abstract;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; virtual; abstract;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; virtual; abstract;
+    function attributeDefinition(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       attType,
+                                       bracket,
+                                       defaultDecl,
+                                       attValue: wideString): TXmlParserError; virtual; abstract;
+    function conditionalSection(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      includeStmt,
+                                      data: wideString): TXmlParserError; virtual; abstract;
+    function DTDcomment(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              data: wideString): TXmlParserError; virtual; abstract;
+    function DTDprocessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                      const locator: TdomStandardLocator;
+                                            targ,
+                                            data : wideString): TXmlParserError; virtual; abstract;
+    function elementTypeDeclaration(const sender: TXmlCustomProcessorAgent;
+                                    const locator: TdomStandardLocator;
+                                          name,
+                                          data: wideString): TXmlParserError; virtual; abstract;
+    function endAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator): TXmlParserError; virtual; abstract;
+    function endDtd(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator): TXmlParserError; virtual; abstract;
+    function entityDeclaration(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                                     name,
+                                     entityValue,
+                                     pubId,
+                                     sysId,
+                                     notaName: wideString): TXmlParserError; virtual; abstract;
+    function notationDeclaration(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       pubId,
+                                       sysId: wideString): TXmlParserError; virtual; abstract;
+    function parameterEntityDeclaration(const sender: TXmlCustomProcessorAgent;
+                                        const locator: TdomStandardLocator;
+                                              name,
+                                              entityValue,
+                                              pubId,
+                                              sysId: wideString): TXmlParserError; virtual; abstract;
+    function parameterEntityRef(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      name: wideString): TXmlParserError; virtual; abstract;
+    function startAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                     const locator: TdomStandardLocator;
+                                           name: wideString): TXmlParserError; virtual; abstract;
+    function startDtd(const sender: TXmlCustomProcessorAgent;
+                      const locator: TdomStandardLocator;
+                            pubId,
+                            sysId: wideString): TXmlParserError; virtual; abstract;
+    function textDeclaration(const sender: TXmlCustomProcessorAgent;
+                             const locator: TdomStandardLocator;
+                                   version,
+                                   encDl: wideString): TXmlParserError; virtual; abstract;
+  published
+    property OnAttributeDefinition: TXmlProcessorEvent9;
+    property OnCDATA: TXmlProcessorEvent2;
+    property OnCharRef: TXmlProcessorEvent2;
+    property OnComment: TXmlProcessorEvent2;
+    property OnConditionalSection: TXmlProcessorEvent10;
+    property OnDoctype: TXmlProcessorEvent6;
+    property OnDtdComment: TXmlProcessorEvent2;
+    property OnDtdProcessingInstruction: TXmlProcessorEvent3;
+    property OnElementTypeDeclaration: TXmlProcessorEvent11;
+    property OnEndAttListDeclaration: TXmlProcessorEvent1;
+    property OnEndDtd: TXmlProcessorEvent1;
+    property OnEndDocument: TXmlProcessorEvent1;
+    property OnEndElement: TXmlProcessorEvent4;
+    property OnEndPrefixMapping: TXmlProcessorEvent2;
+    property OnEntityDeclaration: TXmlProcessorEvent12;
+    property OnEntityRef: TXmlProcessorEvent2;
+    property OnError: TXmlProcessorErrorEvent;
+    property OnFatalError: TXmlProcessorErrorEvent;
+    property OnNotationDeclaration: TXmlProcessorEvent13;
+    property OnParameterEntityDeclaration: TXmlProcessorEvent14;
+    property OnParameterEntityRef: TXmlProcessorEvent2;
+    property OnPCDATA: TXmlProcessorEvent2;
+    property OnProcessingInstruction: TXmlProcessorEvent3;
+    property OnSkippedEntity: TXmlProcessorEvent2;
+    property OnStartAttListDeclaration: TXmlProcessorEvent2;
+    property OnStartDocument: TXmlProcessorEvent2;
+    property OnStartDtd: TXmlProcessorEvent15;
+    property OnStartElement: TXmlProcessorEvent5;
+    property OnStartPrefixMapping: TXmlProcessorEvent7;
+    property OnTextDeclaration: TXmlProcessorEvent16;
+    property OnWarning: TXmlProcessorErrorEvent;
+    property OnXmlDeclaration: TXmlProcessorEvent8;
+  end;
+
+  TXmlStandardHandler = class(TXmlCustomHandler)
+  protected
+    FNextHandler: TXmlCustomHandler;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; override;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; override;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; override;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; override;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                                    prefix: wideString): TXmlParserError; override;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; override;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; override;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; override;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; override;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; override;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; override;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; override;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; override;
+    function attributeDefinition(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       attType,
+                                       bracket,
+                                       defaultDecl,
+                                       attValue: wideString): TXmlParserError; override;
+    function conditionalSection(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      includeStmt,
+                                      data: wideString): TXmlParserError; override;
+    function DTDcomment(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              data: wideString): TXmlParserError; override;
+    function DTDprocessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                      const locator: TdomStandardLocator;
+                                            targ,
+                                            data : wideString): TXmlParserError; override;
+    function elementTypeDeclaration(const sender: TXmlCustomProcessorAgent;
+                                    const locator: TdomStandardLocator;
+                                          name,
+                                          data: wideString): TXmlParserError; override;
+    function endAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator): TXmlParserError; override;
+    function endDtd(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator): TXmlParserError; override;
+    function entityDeclaration(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                                     name,
+                                     entityValue,
+                                     pubId,
+                                     sysId,
+                                     notaName: wideString): TXmlParserError; override;
+    function notationDeclaration(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       pubId,
+                                       sysId: wideString): TXmlParserError; override;
+    function parameterEntityDeclaration(const sender: TXmlCustomProcessorAgent;
+                                        const locator: TdomStandardLocator;
+                                              name,
+                                              entityValue,
+                                              pubId,
+                                              sysId: wideString): TXmlParserError; override;
+    function parameterEntityRef(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      name: wideString): TXmlParserError; override;
+    function startAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                     const locator: TdomStandardLocator;
+                                           name: wideString): TXmlParserError; override;
+    function startDtd(const sender: TXmlCustomProcessorAgent;
+                      const locator: TdomStandardLocator;
+                            pubId,
+                            sysId: wideString): TXmlParserError; override;
+    function textDeclaration(const sender: TXmlCustomProcessorAgent;
+                             const locator: TdomStandardLocator;
+                                   version,
+                                   encDl: wideString): TXmlParserError; override;
+  published
+    property NextHandler: TXmlCustomHandler;
+  end;
+
+  TXmlDistributor = class;
+
+  TXmlHandlerItem = class(TCollectionItem)
+  protected
+    FXmlHandler: TXmlCustomHandler;
+    function getXmlHandler: TXmlCustomHandler;
+    procedure setXmlHandler(Value: TXmlCustomHandler);
+  public
+    procedure Assign(Source: TPersistent); override;
+  published
+    property XmlHandler: TXmlCustomHandler;
+  end;
+
+  TXmlHandlers = class(TCollection)
+  protected
+    function GetItem(Index: Integer): TXmlHandlerItem; virtual;
+    procedure SetItem(Index: Integer; Value: TXmlHandlerItem); virtual;
+    function GetOwner: TPersistent; override;
+  public
+    constructor Create(Distributor: TXmlDistributor);
+    function Add: TXmlHandlerItem;
+    procedure Assign(Source: TPersistent); override;
+    function FindHandlerItem(AHandler: TXmlCustomHandler): TXmlHandlerItem;
+    property Distributor: TXmlDistributor;
+    property Items[Index: Integer]: TXmlHandlerItem; default;
+  end;
+
+  TXmlDistributor = class(TXmlCustomHandler)
+  protected
+    FNextHandlers: TXmlHandlers;
+    procedure DefineProperties(Filer: TFiler); override;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure setNextHandlers(const value: TXmlHandlers);
+  public
+    constructor create(AOwner: TComponent); override;
+    destructor destroy; override;
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; override;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; override;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; override;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; override;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                                    prefix: wideString): TXmlParserError; override;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; override;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; override;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; override;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; override;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; override;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; override;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; override;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; override;
+    function attributeDefinition(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       attType,
+                                       bracket,
+                                       defaultDecl,
+                                       attValue: wideString): TXmlParserError; override;
+    function conditionalSection(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      includeStmt,
+                                      data: wideString): TXmlParserError; override;
+    function DTDcomment(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              data: wideString): TXmlParserError; override;
+    function DTDprocessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                      const locator: TdomStandardLocator;
+                                            targ,
+                                            data : wideString): TXmlParserError; override;
+    function elementTypeDeclaration(const sender: TXmlCustomProcessorAgent;
+                                    const locator: TdomStandardLocator;
+                                          name,
+                                          data: wideString): TXmlParserError; override;
+    function endAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator): TXmlParserError; override;
+    function endDtd(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator): TXmlParserError; override;
+    function entityDeclaration(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                                     name,
+                                     entityValue,
+                                     pubId,
+                                     sysId,
+                                     notaName: wideString): TXmlParserError; override;
+    function notationDeclaration(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       pubId,
+                                       sysId: wideString): TXmlParserError; override;
+    function parameterEntityDeclaration(const sender: TXmlCustomProcessorAgent;
+                                        const locator: TdomStandardLocator;
+                                              name,
+                                              entityValue,
+                                              pubId,
+                                              sysId: wideString): TXmlParserError; override;
+    function parameterEntityRef(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      name: wideString): TXmlParserError; override;
+    function startAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                     const locator: TdomStandardLocator;
+                                           name: wideString): TXmlParserError; override;
+    function startDtd(const sender: TXmlCustomProcessorAgent;
+                      const locator: TdomStandardLocator;
+                            pubId,
+                            sysId: wideString): TXmlParserError; override;
+    function textDeclaration(const sender: TXmlCustomProcessorAgent;
+                             const locator: TdomStandardLocator;
+                                   version,
+                                   encDl: wideString): TXmlParserError; override;
+  published
+    property NextHandlers: TXmlHandlers;
+  end;
+
+  TXmlCustomDTDHandler = class(TXmlStandardHandler)
+  protected
+    function parserErrorFactory(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                const e: EParserException;
+                                const code: wideString): TXmlParserError; virtual;
+  public
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; override;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; override;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; override;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; override;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                                    prefix: wideString): TXmlParserError; override;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; override;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; override;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; override;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; override;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; override;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; override;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; override;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; override;
+  end;
+
+  TXmlCustomContentHandler = class(TXmlStandardHandler)
+  protected
+    function parserErrorFactory(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                const e: EParserException;
+                                const code: wideString): TXmlParserError; virtual;
+  public
+    function attributeDefinition(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       attType,
+                                       bracket,
+                                       defaultDecl,
+                                       attValue: wideString): TXmlParserError; override;
+    function conditionalSection(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      includeStmt,
+                                      data: wideString): TXmlParserError; override;
+    function DTDcomment(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              data: wideString): TXmlParserError; override;
+    function DTDprocessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                      const locator: TdomStandardLocator;
+                                            targ,
+                                            data : wideString): TXmlParserError; override;
+    function elementTypeDeclaration(const sender: TXmlCustomProcessorAgent;
+                                    const locator: TdomStandardLocator;
+                                          name,
+                                          data: wideString): TXmlParserError; override;
+    function endAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator): TXmlParserError; override;
+    function endDtd(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator): TXmlParserError; override;
+    function entityDeclaration(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                                     name,
+                                     entityValue,
+                                     pubId,
+                                     sysId,
+                                     notaName: wideString): TXmlParserError; override;
+    function notationDeclaration(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                       name,
+                                       pubId,
+                                       sysId: wideString): TXmlParserError; override;
+    function parameterEntityDeclaration(const sender: TXmlCustomProcessorAgent;
+                                        const locator: TdomStandardLocator;
+                                              name,
+                                              entityValue,
+                                              pubId,
+                                              sysId: wideString): TXmlParserError; override;
+    function parameterEntityRef(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      name: wideString): TXmlParserError; override;
+    function startAttListDeclaration(const sender: TXmlCustomProcessorAgent;
+                                     const locator: TdomStandardLocator;
+                                           name: wideString): TXmlParserError; override;
+    function startDtd(const sender: TXmlCustomProcessorAgent;
+                      const locator: TdomStandardLocator;
+                            pubId,
+                            sysId: wideString): TXmlParserError; override;
+    function textDeclaration(const sender: TXmlCustomProcessorAgent;
+                             const locator: TdomStandardLocator;
+                                   version,
+                                   encDl: wideString): TXmlParserError; override;
+  end;
+
+  TXmlCustomReader = class(TComponent)
+  protected
+    FNextHandler: TXmlStandardHandler;
+    FOnError: TXmlProcessorErrorEvent;
+    FOnFatalError: TXmlProcessorErrorEvent;
+    FOnWarning: TXmlProcessorErrorEvent;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure sendErrorNotification(const sender: TXmlCustomProcessorAgent;
+                                      var e: TXmlParserError); virtual;
+    function parserErrorFactory(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                const e: EParserException;
+                                const code: wideString): TXmlParserError; virtual;
+    procedure error(const sender: TXmlCustomProcessorAgent;
+                      var e: TXmlParserError); virtual;
+    procedure fatalError(const sender: TXmlCustomProcessorAgent;
+                           var e: TXmlParserError); virtual;
+    procedure warning(const sender: TXmlCustomProcessorAgent;
+                        var e: TXmlParserError); virtual;
+  published
+    property NextHandler: TXmlStandardHandler;
+    property OnError: TXmlProcessorErrorEvent;
+    property OnFatalError: TXmlProcessorErrorEvent;
+    property OnWarning: TXmlProcessorErrorEvent;
+  end;
+
+  TXmlWFTestContentHandler = class(TXmlCustomContentHandler)
+  protected
+    FIsActive: boolean;
+    FDoctypeFound: boolean;
+    FRootFound: boolean;
+    FXMLDeclarationAllowed: boolean;
+    FTagStack: TStringList;
+  public
+    constructor create(AOwner: TComponent); override;
+    destructor destroy; override;
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; override;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; override;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; override;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; override;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                                    prefix: wideString): TXmlParserError; override;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; override;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; override;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; override;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; override;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; override;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; override;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; override;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; override;
+    property isActive: boolean;
+  end;
+
+  TXmlDocBuilder = class(TXmlCustomContentHandler)
+  protected
+    FRefNode: TdomNode;
+    FPrefixUriList: TdomNameValueList;
+  public
+    constructor create(AOwner: TComponent); override;
+    destructor destroy; override;
+    function CDATA(const sender: TXmlCustomProcessorAgent;
+                   const locator: TdomStandardLocator;
+                         data: wideString): TXmlParserError; override;
+    function charRef(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function comment(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           data: wideString): TXmlParserError; override;
+    function doctype(const sender: TXmlCustomProcessorAgent;
+                     const locator: TdomStandardLocator;
+                           name,
+                           pubId,
+                           sysId,
+                           data: wideString): TXmlParserError; override;
+    function endDocument(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator): TXmlParserError; override;
+    function endElement(const sender: TXmlCustomProcessorAgent;
+                        const locator: TdomStandardLocator;
+                              namespaceURI,
+                              tagName: wideString): TXmlParserError; override;
+    function endPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                                     prefix: wideString): TXmlParserError; override;
+    function entityRef(const sender: TXmlCustomProcessorAgent;
+                       const locator: TdomStandardLocator;
+                             name: wideString): TXmlParserError; override;
+    function PCDATA(const sender: TXmlCustomProcessorAgent;
+                    const locator: TdomStandardLocator;
+                          data: wideString): TXmlParserError; override;
+    function processingInstruction(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         targ,
+                                         data : wideString): TXmlParserError; override;
+    function skippedEntity(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 name: wideString): TXmlParserError; override;
+    function startDocument(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                                 defaultRoot: wideString): TXmlParserError; override;
+    function startElement(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                                namespaceURI,
+                                tagName: wideString;
+                                attributes: TdomNameValueList): TXmlParserError; override;
+    function startPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                      prefix,
+                                      uri: wideString): TXmlParserError; override;
+    function xmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                                  version,
+                                  encDl,
+                                  sdDl: wideString): TXmlParserError; override;
+    property referenceNode: TdomNode;
+    // September 21, 2001 - Borland Change - Added property to automatically strip formatting whitespace
+    property preserveWhitespace: boolean;
+  published
+    property BuildNamespaceTree: boolean default false;
+  end;
+
+  TXmlStandardDocReader = class (TXmlCustomReader)
+  protected
+    function writeXmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                                  const locator: TdomStandardLocator;
+                                  const content: wideString): TXmlParserError; virtual;
+    function writeProcessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                         const locator: TdomStandardLocator;
+                                         const content: wideString): TXmlParserError; virtual;
+    function writeComment(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                           const content: wideString): TXmlParserError; virtual;
+    function writeCDATA(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator;
+                         const content: wideString): TXmlParserError; virtual;
+    function writePCDATA(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                          const content: wideString): TXmlParserError; virtual;
+    function writeStartElement(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                const content: wideString): TXmlParserError; virtual;
+    function writeEndElement(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                              const content: wideString): TXmlParserError; virtual;
+    function writeEmptyElement(const sender: TXmlCustomProcessorAgent;
+                                const locator: TdomStandardLocator;
+                                const content: wideString): TXmlParserError; virtual;
+    function writeCharRef(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                           const content: wideString): TXmlParserError; virtual;
+    function writeEntityRef(const sender: TXmlCustomProcessorAgent;
+                             const locator: TdomStandardLocator;
+                             const content: wideString): TXmlParserError; virtual;
+    function writeDoctype(const sender: TXmlCustomProcessorAgent;
+                           const locator: TdomStandardLocator;
+                           const content: wideString): TXmlParserError; virtual;
+  public
+    function  parse(const sender: TXmlCustomProcessorAgent;
+                    const inputSource: TXmlInputSource):boolean; virtual;
+  end;
+
+  TXmlStandardDomReader = class (TXmlCustomReader)
+  protected
+    function writeXmlDeclaration(const sender: TXmlCustomProcessorAgent;
+                                 const locator: TdomStandardLocator;
+                                 const version,
+                                       encDl,
+                                       sdDl: wideString): TXmlParserError; virtual;
+    function writeProcessingInstruction(const sender: TXmlCustomProcessorAgent;
+                                        const locator: TdomStandardLocator;
+                                        const targ,
+                                              attribSequence : wideString): TXmlParserError; virtual;
+    function writeComment(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                          const content: wideString): TXmlParserError; virtual;
+    function writeCDATA(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator;
+                         const content: wideString): TXmlParserError; virtual;
+    function writePCDATA(const sender: TXmlCustomProcessorAgent;
+                         const locator: TdomStandardLocator;
+                         const content: wideString): TXmlParserError; virtual;
+    function writeStartElement(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                               const tagName: wideString;
+                               const attributeList: TdomNameValueList): TXmlParserError; virtual;
+    function writeEndElement(const sender: TXmlCustomProcessorAgent;
+                              const locator: TdomStandardLocator;
+                              const tagName: wideString): TXmlParserError; virtual;
+    function writeEmptyElement(const sender: TXmlCustomProcessorAgent;
+                               const locator: TdomStandardLocator;
+                               const tagName: wideString;
+                               const attributeList: TdomNameValueList): TXmlParserError; virtual;
+    function writeStartPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                     const locator: TdomStandardLocator;
+                                           prefix,
+                                           uri: wideString): TXmlParserError; virtual;
+    function writeEndPrefixMapping(const sender: TXmlCustomProcessorAgent;
+                                   const locator: TdomStandardLocator;
+                                         prefix: wideString): TXmlParserError; virtual;
+    function writeCharRef(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                          const content: wideString): TXmlParserError; virtual;
+    function writeEntityRef(const sender: TXmlCustomProcessorAgent;
+                            const locator: TdomStandardLocator;
+                            const entityName: wideString): TXmlParserError; virtual;
+    function writeDoctype(const sender: TXmlCustomProcessorAgent;
+                          const locator: TdomStandardLocator;
+                          const name,
+                                publicId,
+                                systemId,
+                                intSubset: WideString): TXmlParserError; virtual;
+    function parseloop(const sender: TXmlCustomProcessorAgent;
+                       const sourceNode: TdomNode): TXmlParserError; virtual;
+  public
+    constructor create(AOwner: TComponent); override;
+    function  parse(const sender: TXmlCustomProcessorAgent;
+                    const sourceNode: TdomNode): boolean; virtual;
+  published
+   property PrefixMapping: boolean default false;
+   property SuppressXmlns: boolean default false;
+  end;
+
+  TdomCustomXMLReader = class;
+
+  TdomCustomContentHandler = class
+  public
+    procedure CDATA(const sender: TdomCustomParser;
+                    const locator: TdomStandardLocator;
+                    const data: wideString); virtual;
+    procedure charRef(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); virtual;
+    procedure comment(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); virtual;
+    procedure doctype(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const name,
+                            pubId,
+                            sysId,
+                            data: wideString); virtual;
+    procedure endDocument(const sender: TdomCustomParser); virtual;
+    procedure endElement(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const namespaceURI,
+                               localName,
+                               tagName: wideString); virtual;
+    procedure endPrefixMapping(const sender: TdomCustomParser;
+                               const locator: TdomStandardLocator;
+                               const prefix: wideString); virtual;
+    procedure entityRef(const sender: TdomCustomParser;
+                        const locator: TdomStandardLocator;
+                        const name: wideString); virtual;
+    procedure PCDATA(const sender: TdomCustomParser;
+                     const locator: TdomStandardLocator;
+                     const data: wideString); virtual;
+    procedure processingInstruction(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator;
+                                    const targ,
+                                          data : wideString); virtual;
+    procedure skippedEntity(const sender: TdomCustomParser;
+                            const locator: TdomStandardLocator;
+                            const name: wideString); virtual;
+    procedure startDocument(const sender: TdomCustomParser;
+                            const locator: TdomStandardLocator;
+                                  defaultRoot: wideString); virtual;
+    procedure startElement(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const namespaceURI,
+                                 localName,
+                                 tagName: wideString;
+                                 attributes: TdomNameValueList); virtual;
+    procedure startPrefixMapping(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const prefix,
+                                       uri: wideString); virtual;
+    procedure xmlDeclaration(const sender: TdomCustomParser;
+                             const locator: TdomStandardLocator;
+                             const version,
+                                   encDl,
+                                   sdDl: wideString); virtual;
+  end;
+
+  TdomCustomDTDHandler = class
+  protected
+    function getPEFromCurrentCMObject(const PEReferenceName: wideString): wideString; virtual;
+  public
+    procedure attributeDefinition(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        attType,
+                                        bracket,
+                                        defaultDecl,
+                                        attValue: wideString); virtual;
+    procedure comment(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); virtual;
+    procedure conditionalSection(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const includeStmt,
+                                       data: wideString); virtual;
+    procedure elementTypeDeclaration(const sender: TdomCustomParser;
+                                     const locator: TdomStandardLocator;
+                                     const name,
+                                           data: wideString); virtual;
+    procedure endAttListDeclaration(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator); virtual;
+    procedure endDtd(const sender: TdomCustomParser); virtual;
+    procedure entityDeclaration(const sender: TdomCustomParser;
+                                const locator: TdomStandardLocator;
+                                const name,
+                                      entityValue,
+                                      pubId,
+                                      sysId,
+                                      notaName: wideString); virtual;
+    procedure notationDeclaration(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        pubId,
+                                        sysId: wideString); virtual;
+    procedure parameterEntityDeclaration(const sender: TdomCustomParser;
+                                         const locator: TdomStandardLocator;
+                                         const name,
+                                               entityValue,
+                                               pubId,
+                                               sysId: wideString); virtual;
+    procedure parameterEntityRef(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const name: wideString); virtual;
+    procedure processingInstruction(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator;
+                                    const targ,
+                                          data : wideString); virtual;
+    procedure startAttListDeclaration(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const name: wideString); virtual;
+    procedure startDtd(const sender: TdomCustomParser;
+                       const pubId,
+                             sysId: wideString); virtual;
+    procedure textDeclaration(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const version,
+                                    encDl: wideString); virtual;
+  end;
+
+  TdomCustomErrorHandler = class
+  public
+    procedure error(const sender: TdomCustomParser;
+                    const locator: TdomStandardLocator;
+                    const e: EParserException;
+                    const code: wideString); virtual;
+    procedure fatalError(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const e: EParserException;
+                         const code: wideString); virtual;
+    procedure warning(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const e: EParserException;
+                      const code: wideString); virtual;
+  end;
+
+  TdomStandardContentModelReader = class
+  public
+    function parse(const sender: TdomCustomParser;
+                   const source: TdomCustomCMIEObject):boolean; virtual;
+    property errorHandler: TdomCustomErrorHandler;
+  end;
+
+  TdomCustomXMLReader = class
+  public
+    function parse(const sender: TdomCustomParser;
+                   const inputSource: TXmlInputSource):boolean; virtual;
+    property contentHandler: TdomCustomContentHandler;
+    property dtdHandler: TdomCustomDTDHandler;
+    property errorHandler: TdomCustomErrorHandler;
+    property locator: TdomStandardLocator;
+  end;
+
+  TdomStandardDocXMLReader = class (TdomCustomXMLReader)
+  protected
+    procedure writeXmlDeclaration(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const content: wideString); virtual;
+    procedure writeProcessingInstruction(const sender: TdomCustomParser;
+                                         const locator: TdomStandardLocator;
+                                         const content: wideString); virtual;
+    procedure writeComment(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const content: wideString); virtual;
+    procedure writeCDATA(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const content: wideString); virtual;
+    procedure writePCDATA(const sender: TdomCustomParser;
+                          const locator: TdomStandardLocator;
+                          const content: wideString); virtual;
+    procedure writeStartElement(const sender: TdomCustomParser;
+                                const locator: TdomStandardLocator;
+                                const content: wideString); virtual;
+    procedure writeEndElement(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const content: wideString); virtual;
+    procedure writeEmptyElement(const sender: TdomCustomParser;
+                                const locator: TdomStandardLocator;
+                                const content: wideString); virtual;
+    procedure writeCharRef(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const content: wideString); virtual;
+    procedure writeEntityRef(const sender: TdomCustomParser;
+                             const locator: TdomStandardLocator;
+                             const content: wideString); virtual;
+    procedure writeDoctype(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const content: wideString); virtual;
+  public
+    function  parse(const sender: TdomCustomParser;
+                    const inputSource: TXmlInputSource):boolean; override;
+  end;
+
+  TdomStandardIntSubsetXMLReader = class (TdomCustomXMLReader)
+  protected
+    procedure writeProcessingInstruction(const sender: TdomCustomParser;
+                                         const locator: TdomStandardLocator;
+                                         const content: wideString); virtual;
+    procedure writeComment(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const content: wideString); virtual;
+    procedure writeParameterEntityRef(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const content: wideString); virtual;
+    procedure writeEntityDeclaration(const sender: TdomCustomParser;
+                                     const locator: TdomStandardLocator;
+                                     const content: wideString); virtual;
+    procedure writeElementDeclaration(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const content: wideString); virtual;
+    procedure writeAttributeDeclaration(const sender: TdomCustomParser;
+                                        const locator: TdomStandardLocator;
+                                        const content: wideString); virtual;
+    procedure writeNotationDeclaration(const sender: TdomCustomParser;
+                                       const locator: TdomStandardLocator;
+                                       const content: wideString); virtual;
+  public
+    function  parse(const sender: TdomCustomParser;
+                    const inputSource: TXmlInputSource):boolean; override;
+  end;
+
+  TdomStandardExtSubsetXMLReader = class (TdomStandardIntSubsetXMLReader)
+  protected
+    function includeAsPE(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const inputSource: TXmlInputSource): wideString; virtual;
+    function includeInLiteral(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const inputSource: TXmlInputSource): wideString; virtual;
+    procedure writeTextDeclaration(const sender: TdomCustomParser;
+                                   const locator: TdomStandardLocator;
+                                   const content: wideString); virtual;
+    procedure writeConditionalSection(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const content: wideString); virtual;
+  public
+    function  parse(const sender: TdomCustomParser;
+                    const inputSource: TXmlInputSource):boolean; override;
+  end;
+
+  TdomStandardErrorHandler = class(TdomCustomErrorHandler)
+  protected
+    FErrorList: TList;
+  public
+    constructor create;
+    destructor destroy; override;
+    procedure clearErrorList; virtual;
+    procedure error(const sender: TdomCustomParser;
+                    const locator: TdomStandardLocator;
+                    const e: EParserException;
+                    const code: wideString); override;
+    procedure fatalError(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const e: EParserException;
+                         const code: wideString); override;
+    procedure warning(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const e: EParserException;
+                      const code: wideString); override;
+    property errorList: TList;
+  end;
+
+  TdomStandardDocBuilder = class(TdomCustomContentHandler)
+  protected
+    FReferenceNode: TdomNode;
+    FRefNode: TdomNode;
+    FRefDocument: TdomDocument;
+    FXMLDeclarationAllowed: boolean;
+  public
+    constructor create;
+    procedure comment(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); override;
+    procedure CDATA(const sender: TdomCustomParser;
+                    const locator: TdomStandardLocator;
+                    const data: wideString); override;
+    procedure charRef(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); override;
+    procedure doctype(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const name,
+                            pubId,
+                            sysId,
+                            data: wideString); override;
+    procedure endDocument(const sender: TdomCustomParser); override;
+    procedure endElement(const sender: TdomCustomParser;
+                         const locator: TdomStandardLocator;
+                         const namespaceURI,
+                               localName,
+                               tagName: wideString); override;
+    procedure endPrefixMapping(const sender: TdomCustomParser;
+                               const locator: TdomStandardLocator;
+                               const prefix: wideString); override;
+    procedure entityRef(const sender: TdomCustomParser;
+                        const locator: TdomStandardLocator;
+                        const name: wideString); override;
+    procedure PCDATA(const sender: TdomCustomParser;
+                     const locator: TdomStandardLocator;
+                     const data: wideString); override;
+    procedure processingInstruction(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator;
+                                    const targ,
+                                          data : wideString); override;
+    procedure skippedEntity(const sender: TdomCustomParser;
+                            const locator: TdomStandardLocator;
+                            const name: wideString); override;
+    procedure startDocument(const sender: TdomCustomParser;
+                            const locator: TdomStandardLocator;
+                                  defaultRoot: wideString); override;
+    procedure startElement(const sender: TdomCustomParser;
+                           const locator: TdomStandardLocator;
+                           const namespaceURI,
+                                 localName,
+                                 tagName: wideString;
+                                 attributes: TdomNameValueList); override;
+    procedure startPrefixMapping(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const prefix,
+                                       uri: wideString); override;
+    procedure xmlDeclaration(const sender: TdomCustomParser;
+                             const locator: TdomStandardLocator;
+                             const version,
+                                   encDl,
+                                   sdDl: wideString); override;
+    property ReferenceDocument: TdomDocument;
+    property ReferenceNode: TdomNode;
+  end;
+
+  TdomDTDContentModelHandler = class(TdomCustomDTDHandler)
+  protected
+    FCurrentAttListName: wideString;
+    procedure insertMixedContent(const sender: TdomCustomParser;
+                                 const refNode: TdomCMNode;
+                                 const contSpec: wideString); virtual;
+    procedure insertChildrenContent(const sender: TdomCustomParser;
+                                    const refNode: TdomCMNode;
+                                    const contSpec: wideString); virtual;
+    procedure insertNotationOrEnumerationContent(const sender: TdomCustomParser;
+                                                 const refCMAttribute: TdomCMAttribute;
+                                                 const contSpec: wideString); virtual;
+  protected
+    FContentModel: TdomCMObject;
+    procedure ResolveCharRefsAndPERefs(const s: wideString;
+                                         var result: wideString;
+                                         var error: boolean); virtual;
+    procedure CDataNormalization(const s: wideString;
+                                   var result: wideString;
+                                   var error: boolean); virtual;
+  public
+    procedure attributeDefinition(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        attType,
+                                        bracket,
+                                        defaultDecl,
+                                        attValue: wideString); override;
+    procedure comment(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); override;
+    procedure conditionalSection(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const includeStmt,
+                                       data: wideString); override;
+    procedure elementTypeDeclaration(const sender: TdomCustomParser;
+                                     const locator: TdomStandardLocator;
+                                     const name,
+                                           data: wideString); override;
+    procedure endAttListDeclaration(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator); override;
+    procedure endDtd(const sender: TdomCustomParser); override;
+    procedure entityDeclaration(const sender: TdomCustomParser;
+                                const locator: TdomStandardLocator;
+                                const name,
+                                      entityValue,
+                                      pubId,
+                                      sysId,
+                                      notaName: wideString); override;
+    procedure notationDeclaration(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        pubId,
+                                        sysId: wideString); override;
+    procedure parameterEntityDeclaration(const sender: TdomCustomParser;
+                                         const locator: TdomStandardLocator;
+                                         const name,
+                                               entityValue,
+                                               pubId,
+                                               sysId: wideString); override;
+    procedure parameterEntityRef(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const name: wideString); override;
+    procedure processingInstruction(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator;
+                                    const targ,
+                                          data : wideString); override;
+    procedure startAttListDeclaration(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const name: wideString); override;
+    procedure startDtd(const sender: TdomCustomParser;
+                       const pubId,
+                             sysId: wideString); override;
+    procedure textDeclaration(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const version,
+                                    encDl: wideString); override;
+    property contentModel: TdomCMObject;
+  end;
+
+  TdomStandardIntSubsetBuilder = class(TdomCustomDtdHandler)
+  protected
+    FRefNode: TdomCMNode;
+    function getPEFromCurrentCMObject(const PEReferenceName: wideString): wideString; override;
+    procedure resolveCharRefsAndPERefs(const s: wideString;
+                                         var result: wideString;
+                                         var error: boolean); virtual;
+    procedure insertMixedContent(const sender: TdomCustomParser;
+                                 const refNode: TdomCMNode;
+                                 const contSpec: wideString); virtual;
+    procedure insertChildrenContent(const sender: TdomCustomParser;
+                                    const refNode: TdomCMNode;
+                                    const contSpec: wideString); virtual;
+    procedure insertNotationOrEnumerationContent(const sender: TdomCustomParser;
+                                                 const refCMAttrDefinition: TdomCMAttrDefinition;
+                                                 const contSpec: wideString); virtual;
+    procedure setReferenceNode(const node: TdomCMNode); virtual;
+  public
+    constructor create; virtual;
+    procedure attributeDefinition(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        attType,
+                                        bracket,
+                                        defaultDecl,
+                                        attValue: wideString); override;
+    procedure comment(const sender: TdomCustomParser;
+                      const locator: TdomStandardLocator;
+                      const data: wideString); override;
+    procedure conditionalSection(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const includeStmt,
+                                       data: wideString); override;
+    procedure elementTypeDeclaration(const sender: TdomCustomParser;
+                                     const locator: TdomStandardLocator;
+                                     const name,
+                                           data: wideString); override;
+    procedure endAttListDeclaration(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator); override;
+    procedure endDtd(const sender: TdomCustomParser); override;
+    procedure entityDeclaration(const sender: TdomCustomParser;
+                                const locator: TdomStandardLocator;
+                                const name,
+                                      entityValue,
+                                      pubId,
+                                      sysId,
+                                      notaName: wideString); override;
+    procedure notationDeclaration(const sender: TdomCustomParser;
+                                  const locator: TdomStandardLocator;
+                                  const name,
+                                        pubId,
+                                        sysId: wideString); override;
+    procedure parameterEntityDeclaration(const sender: TdomCustomParser;
+                                         const locator: TdomStandardLocator;
+                                         const name,
+                                               entityValue,
+                                               pubId,
+                                               sysId: wideString); override;
+    procedure parameterEntityRef(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const name: wideString); override;
+    procedure processingInstruction(const sender: TdomCustomParser;
+                                    const locator: TdomStandardLocator;
+                                    const targ,
+                                          data : wideString); override;
+    procedure startAttListDeclaration(const sender: TdomCustomParser;
+                                      const locator: TdomStandardLocator;
+                                      const name: wideString); override;
+    procedure startDtd(const sender: TdomCustomParser;
+                       const pubId,
+                             sysId: wideString); override;
+    procedure textDeclaration(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const version,
+                                    encDl: wideString); override;
+    property referenceNode: TdomCMNode;
+  end;
+
+  TdomStandardExtSubsetBuilder = class(TdomStandardIntSubsetBuilder)
+  protected
+    FTextDeclarationAllowed: boolean;
+    function getPEFromCurrentCMObject(const PEReferenceName: wideString): wideString; override;
+    procedure setReferenceNode(const node: TdomCMNode); override;
+  public
+    constructor create; override;
+    procedure conditionalSection(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const includeStmt,
+                                       data: wideString); override;
+    procedure parameterEntityRef(const sender: TdomCustomParser;
+                                 const locator: TdomStandardLocator;
+                                 const name: wideString); override;
+    procedure startDtd(const sender: TdomCustomParser;
+                       const pubId,
+                             sysId: wideString); override;
+    procedure textDeclaration(const sender: TdomCustomParser;
+                              const locator: TdomStandardLocator;
+                              const version,
+                                    encDl: wideString); override;
+  end;
+
+  TdomCustomParser = class (TComponent);
+
+  TdomDtdAnalyzer = class (TdomCustomParser)
+  public
+    constructor create(aOwner: TComponent); override;
+    destructor destroy; override;
+    procedure analyzeCM(const source: TdomCustomCMIEObject;
+                        const contentModel: TdomCMObject); virtual;
+    procedure analyzeIntDTDStr(      str: wideString;
+                               const contentModel: TdomCMObject); virtual;
+    property dtdHandler: TdomDTDContentModelHandler;
+    property dtdReader: TdomStandardContentModelReader;
+    property errorHandler: TdomCustomErrorHandler;
+    property intDtdReader: TdomStandardIntSubsetXMLReader;
+  end;
+
+  TXmlToDomParser = class (TdomCustomParser)
+  protected
+    FDocBuilder: TdomStandardDocBuilder;
+    FDocXMLReader: TdomStandardDocXMLReader;
+    FErrorHandler: TdomStandardErrorHandler;
+    FExtDtdBuilder: TdomStandardExtSubsetBuilder;
+    FExtDtdReader: TdomStandardExtSubsetXMLReader;
+    FIntDtdBuilder: TdomStandardIntSubsetBuilder;
+    FIntDtdReader: TdomStandardIntSubsetXMLReader;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure parseDtd(const locator: TdomStandardLocator;
+                       const name,
+                             pubId,
+                             sysId,
+                             data: wideString;
+                       const standalone: boolean); virtual;
+  public
+    constructor create(aOwner: TComponent); override;
+    destructor destroy; override;
+    procedure docMemoryToDom(const ptr: pointer;
+                             const size: longint;
+                             const pubId,
+                                   sysId: wideString;
+                             const refNode: TdomNode); virtual;
+    procedure docSourceCodeToDom(const docSourceCode: TXmlSourceCode;
+                                 const pubId,
+                                       sysId: wideString;
+                                 const refNode: TdomNode); virtual;
+    procedure docStreamToDom(const stream: TStream;
+                             const pubId,
+                                   sysId: wideString;
+                             const refNode: TdomNode); virtual;
+    procedure docStringToDom(const Str: string;
+                             const pubId,
+                                   sysId: wideString;
+                             const refNode: TdomNode); virtual;
+    procedure docWideStringToDom(      str: wideString;
+                                 const pubId,
+                                       sysId: wideString;
+                                 const refNode: TdomNode); virtual;
+    procedure extDtdMemoryToDom(const ptr: pointer;
+                                const size: longint;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure extDtdSourceCodeToDom(const ExtDtdSourceCode: TXmlSourceCode;
+                                    const pubId,
+                                          sysId: wideString;
+                                    const refNode: TdomCMNode); virtual;
+    procedure extDtdStreamToDom(const stream: TStream;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure extDtdStringToDom(const str: string;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure extDtdWideStringToDom(      str: wideString;
+                                    const pubId,
+                                          sysId: wideString;
+                                    const refNode: TdomCMNode); virtual;
+    procedure intDtdMemoryToDom(const ptr: pointer;
+                                const size: longint;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure intDtdSourceCodeToDom(const IntDtdSourceCode: TXmlSourceCode;
+                                    const pubId,
+                                          sysId: wideString;
+                                    const refNode: TdomCMNode); virtual;
+    procedure intDtdStreamToDom(const stream: TStream;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure intDtdStringToDom(const str: string;
+                                const pubId,
+                                      sysId: wideString;
+                                const refNode: TdomCMNode); virtual;
+    procedure intDtdWideStringToDom(      str: wideString;
+                                    const pubId,
+                                          sysId: wideString;
+                                    const refNode: TdomCMNode); virtual;
+    function fileToDom(const filename: TFileName): TdomDocument; virtual;
+    function memoryToDom(const ptr: pointer;
+                         const size: longint): TdomDocument; virtual;
+    function sourceCodeToDom(const intDtdSourceCode: TXmlSourceCode): TdomDocument; virtual;
+    function streamToDom(const stream: TStream): TdomDocument; virtual;
+    function stringToDom(const str: String): TdomDocument; virtual;
+    function wideStringToDom(str: wideString): TdomDocument; virtual;
+    property docBuilder: TdomStandardDocBuilder;
+    property docXMLReader: TdomStandardDocXMLReader;
+    property errorHandler: TdomStandardErrorHandler;
+    property extDtdBuilder: TdomStandardExtSubsetBuilder;
+    property extDtdReader: TdomStandardExtSubsetXMLReader;
+    property intDtdBuilder: TdomStandardIntSubsetBuilder;
+    property intDtdReader: TdomStandardIntSubsetXMLReader;
+  published
+    property DOMImpl: TDomImplementation;
+    property onExternalSubset: TXmlParserEvent;
+  end;
+
+function xmlExtractPrefix(const qualifiedName: wideString): wideString;
+function xmlExtractLocalName(const qualifiedName: wideString): wideString;
+
+function isXmlChar(const S: WideChar): boolean;
+function isXmlWhiteSpace(const S: WideChar): boolean;
+function isXmlLetter(const S: WideChar): boolean;
+function isXmlBaseChar(const S: WideChar): boolean;
+function isXmlIdeographic(const S: WideChar): boolean;
+function isXmlCombiningChar(const S: WideChar): boolean;
+function isXmlDigit(const S: WideChar): boolean;
+function isXmlExtender(const S: WideChar): boolean;
+function isXmlNameChar(const S: WideChar): boolean;
+function isXmlPubidChar(const S: WideChar): boolean;
+
+function isXmlChars(const S: wideString): boolean;
+function isXmlS(const S: wideString): boolean;
+function isXmlName(const S: wideString): boolean;
+function isXmlNames(const S: wideString): boolean;
+function isXmlNmtoken(const S: wideString): boolean;
+function isXmlNmtokens(const S: wideString): boolean;
+function isXmlCharRef(const S: wideString): boolean;
+function isXmlEntityRef(const S: wideString): boolean;
+function isXmlPEReference(const S: wideString): boolean;
+function isXmlReference(const S: wideString): boolean;
+function isXmlEntityValue(const S: wideString): boolean;
+function isXmlAttValue(const S: wideString): boolean;
+function isXmlSystemLiteral(const S: wideString): boolean;
+function isXmlPubidLiteral(const S: wideString): boolean;
+function isXmlComment(const S: wideString): boolean;
+function isXmlCData(const S: wideString): boolean;
+function isXmlCharData(const S: wideString): boolean;
+function isXmlPITarget(const S: wideString): boolean;
+function isXmlVersionNum(const S: wideString): boolean;
+function isXmlEncName(const S: wideString): boolean;
+function isXmlStringType(const S: wideString): boolean;
+function isXmlTokenizedType(const S: wideString): boolean;
+
+function isXmlNCNameChar(const s: WideChar): boolean;
+function isXmlNCName(const S: wideString): boolean;
+function isXmlDefaultAttName(const S: wideString): boolean;
+function isXmlPrefixedAttName(const S: wideString): boolean;
+function isXmlNSAttName(const S: wideString): boolean;
+function isXmlLocalPart(const S: wideString): boolean;
+function isXmlPrefix(const S: wideString): boolean;
+function isXmlQName(const S: wideString): boolean;
+
+function resolveCharRefs(const S: wideString): wideString;
+function xmlIntToCharRef(const value: integer): wideString;
+function xmlCharRefToInt(const S: wideString): integer;
+function xmlCharRefToStr(const S: wideString): wideString;
+function xmlStrToCharRef(const S: wideString): wideString;
+function Iso8859_1ToUTF16Char(const P: Char):WideChar;
+function Iso8859_2ToUTF16Char(const P: Char):WideChar;
+function Iso8859_3ToUTF16Char(const P: Char):WideChar;
+function Iso8859_4ToUTF16Char(const P: Char):WideChar;
+function Iso8859_5ToUTF16Char(const P: Char):WideChar;
+function Iso8859_6ToUTF16Char(const P: Char):WideChar;
+function Iso8859_7ToUTF16Char(const P: Char):WideChar;
+function Iso8859_8ToUTF16Char(const P: Char):WideChar;
+function Iso8859_9ToUTF16Char(const P: Char):WideChar;
+function Iso8859_10ToUTF16Char(const P: Char):WideChar;
+function Iso8859_13ToUTF16Char(const P: Char):WideChar;
+function Iso8859_14ToUTF16Char(const P: Char):WideChar;
+function Iso8859_15ToUTF16Char(const P: Char):WideChar;
+function KOI8_RToUTF16Char(const P: Char):WideChar;
+function cp10000_MacRomanToUTF16Char(const P: Char):WideChar;
+function cp1250ToUTF16Char(const P: Char):WideChar;
+function cp1251ToUTF16Char(const P: Char):WideChar;
+function cp1252ToUTF16Char(const P: Char):WideChar;
+function Iso8859_1ToUTF16Str(const S: string):wideString;
+function Iso8859_2ToUTF16Str(const S: string):wideString;
+function Iso8859_3ToUTF16Str(const S: string):wideString;
+function Iso8859_4ToUTF16Str(const S: string):wideString;
+function Iso8859_5ToUTF16Str(const S: string):wideString;
+function Iso8859_6ToUTF16Str(const S: string):wideString;
+function Iso8859_7ToUTF16Str(const S: string):wideString;
+function Iso8859_8ToUTF16Str(const S: string):wideString;
+function Iso8859_9ToUTF16Str(const S: string):wideString;
+function Iso8859_10ToUTF16Str(const S: string):wideString;
+function Iso8859_13ToUTF16Str(const S: string):wideString;
+function Iso8859_14ToUTF16Str(const S: string):wideString;
+function Iso8859_15ToUTF16Str(const S: string):wideString;
+function KOI8_RToUTF16Str(const S: string):wideString;
+function cp10000_MacRomanToUTF16Str(const S: string):wideString;
+function cp1250ToUTF16Str(const S: string):wideString;
+function cp1251ToUTF16Str(const S: string):wideString;
+function cp1252ToUTF16Str(const S: string):wideString;
+function UTF8ToUTF16BEStr(const S: string): wideString;
+function UTF16BEToUTF8Str(const ws: wideString;
+                          const expandLF: boolean): string;
+function UTF16HighSurrogate(const value: integer): WideChar;
+function UTF16LowSurrogate(const value: integer): WideChar;
+function UTF16SurrogateToInt(const highSurrogate, lowSurrogate: WideChar): integer;
+function IsUTF16HighSurrogate(const S: WideChar): boolean;
+function IsUTF16LowSurrogate(const S: WideChar): boolean;
+
+procedure Register;
+
+procedure xmlAnalyseElement(const source: wideString;
+                              var tagName: wideString;
+                                  attributes: TdomNameValueList);
+
+procedure xmlAnalyseEntityDef(    source: wideString;
+                              var entityValue,
+                                  systemLiteral,
+                                  pubidLiteral,
+                                  nDataName: wideString;
+                              var error: boolean);
+
+procedure xmlAnalyseNotationDecl(const decl: wideString;
+                                   var systemLiteral,
+                                       pubidLiteral: wideString;
+                                   var error: boolean);
+
+procedure xmlAnalysePCDATA(source: wideString;
+                           var lines: TStringList);
+
+function xmlAnalysePubSysId(const publicId,
+                                  systemId,
+                                  notaName: wideString): wideString;
+
+procedure xmlAnalyseTag(const source: wideString;
+                          var tagName,
+                              attribSequence: wideString);
+
+procedure xmlIsolateQuote(    source: wideString;
+                          var content,
+                              rest: wideString;
+                          var quoteType: WideChar;
+                          var error: boolean);
+
+function xmlNormalizeLineBreaks(const source :wideString): wideString;
+
+function xmlReplaceQuotes(const source: wideString): wideString;
+
+function xmlTrunc(const source: wideString): wideString;
+
+procedure xmlTruncAngularBrackets(const source: wideString;
+                                    var content: wideString;
+                                    var error: boolean);
+
+procedure xmlTruncRoundBrackets(const source: wideString;
+                                  var content: wideString;
+                                  var error: boolean);
+
+procedure writeWideString(stream: TStream; const xmlStrg: wideString);
+
+procedure writeWideStrings(stream: TStream; const xmlStrgs: array of wideString);
+
+procedure writeWideChars(stream: TStream; const xmlChars: array of wideChar);
+
+var
+  domDocumentFormatList: PdomDocumentFormat = nil;
+
+
+implementation

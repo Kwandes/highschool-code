@@ -1,0 +1,602 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{       XML Data Binding Code Generation                }
+{                                                       }
+{       Copyright (c) 2001 Borland Software Corp.       }
+{                                                       }
+{*******************************************************}
+
+unit XMLBindGen;
+
+interface
+
+uses
+  SysUtils, Classes, Variants, XMLSchema, XMLDoc, XMLIntf, xmldom;
+
+const                                { Do not localize anything in this unit. }
+  { AppInfo }
+  aiDBWizPrefix = 'xdb';
+  aiIdentifierName = 'identifierName';
+  aiDataType = 'dataType';
+  aiBound = 'bound';
+  aiReadOnly = 'ReadOnly';
+  aiRepeated = 'repeated';
+  aiDocElement = 'docElement';
+
+  { Code }
+  SIndex = 'Index';
+  SInteger = 'Integer';
+  SIndexCode = SIndex + ': ' + SInteger;
+  SBegin = 'begin';
+  SEnd = 'end;';
+  SAdd = 'Add';
+  SInsert = 'Insert';
+  SOverride = ' override;';
+  SPrivate = 'private';
+  SProtected = 'protected';
+  SPublic = 'public';
+  SPublished = 'published';
+  STrue = 'True';
+  SFalse = 'False';
+
+  { Option Categories }
+  SCodeGen = 'CodeGen';
+  SDataTypeMap = 'DataTypeMap';
+
+  { Code Gen Options }
+  cgPropGetPrefix = 'PropGetPrefix';
+  cgPropSetPrefix = 'PropSetPrefix';
+  cgClassPrefix = 'ClassPrefix';
+  cgInterfacePrefix = 'IntfPrefix';
+  cgListTypeSuffix = 'NodeListSuffix';
+  cgNodeIntfBase = 'NodeIntfBase';
+  cgNodeClassBase = 'NodeClassBase';
+  cgCollIntfBase = 'CollIntfBase';
+  cgCollClassBase = 'CollClassBase';
+  cgDefaultDataType = 'DefDataType';
+
+  NativeTypes: array[0..20] of string = ('string','Variant','WideString',
+    'Boolean','Integer','Double','Char','WideChar','Shortint','Smallint',
+    'Byte','Word','Extended','Longint','Cardinal','Single','Extended','Comp',
+    'Currency','TDateTime','Int64');
+
+resourcestring
+  { Comments }
+  SPropertyAccessors = '  { Property Accessors }';
+  SMethodsAndProps = '  { Methods & Properties }';
+  SForwardDecl = 'Forward Decls';
+  SGlobalFunctions = 'Global Functions';           
+
+type
+
+  TXMLBindingType = (btComplexType, btSimpleType, btComplexElement,
+    btCollectionElement, btSimpleElement, btAttribute, btComplexTypeList,
+    btSimpleTypeList, btNone);
+
+  TOptionChangeEvent = procedure(const SectionName, OptionName: string;
+    const Value: Variant) of object;
+
+  TBindingOptions = class(TPersistent)
+  protected
+    procedure SetOption(const Name: string; const Value: Variant);
+    property SectionName: string;
+    procedure AssignTo(Dest: TPersistent); override;
+    procedure DoOptionChange(const OptionName: string; const Value: Variant);
+  public
+    constructor Create(const SectionName: string;
+      OnChangeEvent: TOptionChangeEvent = nil);
+    destructor Destroy; override;
+    procedure EnsureOption(const OptionStr: string);
+    function GetOptionValue(const Name: string): Variant;
+    function GetOption(const Name: string; const Default: Variant): Variant;
+    procedure InitializeOptions(const Values: array of string); overload;
+    procedure InitializeOptions(const Values: TStrings); overload;
+    function IsTrue(const Name: string): Boolean;
+    property Options[const Name: string]: Variant; default;
+    property OptionData[const Name: string]: TObject;
+    procedure Assign(Source: TPersistent); override;
+    procedure Clear;
+    property OnOptionChange: TOptionChangeEvent;
+  end;
+
+{ =========================================================================== }
+{                     Databinding Interfaces                                  }
+{ =========================================================================== }
+
+{ IXMLBindingAppInfo }
+
+  { This interface is used to persist data binding settings into an
+    AppInfo node of the source schema document.  It is use by the
+    various IXMLBindingInfo interfaces defined below }
+
+  IXMLBindingAppInfo = interface(IXMLAppInfo)
+    ['{3FF5455B-C787-4EA8-ADCF-AB0F66874D13}']
+    { Property Accessors }
+    function GetBindingAppInfoURI: DOMString;
+    function GetBound: Variant;
+    function GetDataType: Variant;
+    function GetDocElement: Variant;
+    function GetIdentifierName: Variant;
+    function GetPropReadOnly: Variant;
+    function GetRepeated: Variant;
+    procedure SetBindingAppInfoURI(const Value: DOMString);
+    procedure SetBound(const Value: Variant);
+    procedure SetDataType(const Value: Variant);
+    procedure SetDocElement(const Value: Variant);
+    procedure SetIdentifierName(const Value: Variant);
+    procedure SetPropReadOnly(const Value: Variant);
+    procedure SetRepeated(const Value: Variant);
+    { Public Properties & Methods }
+    function HasValueFor(const AttrName: DOMString): Boolean;
+    procedure RemoveValue(const AttrName: DOMString);
+    property BindingAppInfoURI: DOMString;
+    property Bound: Variant;
+    property DataType: Variant;
+    property DocElement: Variant;
+    property IdentifierName: Variant;
+    property PropReadOnly: Variant;
+    property Repeated: Variant;
+  end;
+
+{ IXMLBindingInfo }
+
+  { This interface contains the common properties used to bind all schema
+    components (complextypes, elements, attributes, etc.) }
+
+  IXMLBindingInfo = interface
+    ['{1937F2F8-298E-42A6-983C-EA6BA68D30B8}']
+    { Property Accessors }
+    function GetBindingType: TXMLBindingType;
+    function GetBound: Boolean;
+    function GetDataType: string;
+    function GetDocumentation: string;
+    function GetIdentifierName: string;
+    function GetSourceName: string;
+    function GetSourceType: string;
+    procedure SetBindingType(const Value: TXMLBindingType);
+    procedure SetBound(const Value: Boolean);
+    procedure SetDataType(const Value: string);
+    procedure SetDocumentation(const Value: string);
+    procedure SetIdentifierName(const Value: string);
+    { Public Methods and Properties }
+    property BindingType: TXMLBindingType;
+    property Bound: Boolean;
+    property DataType: string;
+    property Documentation: string;
+    property IdentifierName: string;
+    property SourceName: string;
+    property SourceType: string;
+  end;
+
+{ IXMLDataTypeBinding  }
+
+  IXMLDataTypeBinding = interface(IXMLBindingInfo)
+    ['{24C2FDBD-58BB-443A-9AD6-9256B9668026}']
+    { Property Accessors }
+    function GetRepeated: Boolean;
+    procedure SetRepeated(const Value: Boolean);
+    { Public Methods and Properties }
+    function TypeDef: IXMLTypeDef;
+    property Repeated: Boolean;
+  end;
+
+{ IXMLComplexTypeBinding }
+
+  { This interface contains the properties needed to bind a complex type to
+    a class/interface definition. }
+
+  IXMLPropertyBinding = interface;
+    
+  IXMLComplexTypeBinding = interface(IXMLDataTypeBinding)
+    ['{87908153-1958-48D0-98CE-B0FF93337113}']
+    { Property Accessors }
+    function GetDocElementName: DOMString;
+    procedure SetDocElementName(const Value: DOMString);
+    { Public Methods and Properties }
+    function AncestorClass: string;
+    function AncestorInterface: string;
+    function ClassIdent: string;
+    function CollectionItem: IXMLPropertyBinding;
+    function CollectionItemName: string;
+    function ComplexTypeDef: IXMLComplexTypeDef;
+    function IsDocElement: Boolean;
+    function PureCollection: Boolean;
+    property DocElementName: DOMString;
+  end;
+
+{ IXMLDataTypeListBinding }
+
+  IXMLDataTypeListBinding = interface(IXMLComplexTypeBinding)
+    ['{80994C17-4BDE-4A6F-A506-026CE43746BC}']
+    function ItemBindInfo: IXMLDataTypeBinding;
+  end;
+
+{ IXMLPropertyBinding }
+
+  { This interface contains the properties needed to bind either an attribute
+    or an element to a property in class/interface definition }
+
+  IXMLPropertyBinding = interface(IXMLBindingInfo)
+    ['{565D9C12-E6E5-4F47-8264-1AF2459D7BBF}']
+    { Property Accessors }
+    function GetPropReadOnly: Boolean;
+    function GetSchemaItem: IXMLTypedSchemaItem;
+    procedure SetPropReadOnly(const Value: Boolean);
+    procedure SetDataType(const Value: string);
+    { Public Methods and Properties }
+    function IsListProp: Boolean;
+    function TypeBindInfo: IXMLDataTypeBinding;
+    property DataType: string;
+    property SchemaItem: IXMLTypedSchemaItem;
+    property PropReadOnly: Boolean; { Element / Attr }
+  end;
+
+{ IXMLBindingManager }
+
+  TCodeWriter = class;
+  TCodeWriterClass = class of TCodeWriter;
+  TIdentifierCheckEvent = procedure(var Identifier: string) of object;
+
+  IXMLBindingManager = interface
+    { Property Accessors }
+    function GetBindingAppInfoURI: DOMString;
+    function GetClassNameStr: string;
+    function GetCodeGenOptions: TBindingOptions;
+    function GetNativeTypeMap: TBindingOptions;
+    procedure SetBindingAppInfoURI(const Value: DOMString);
+    procedure SetClassNameStr(const Value: string);
+    { Methods and Properties }
+    procedure DoIdentifierCheck(var Identifier: string);
+    function GetBindableItems(const Schema: IXMLSchemaDef): IInterfaceList;
+    function GetBindingInfo(const ASchemaItem: IInterface): IXMLBindingInfo; overload;
+    function GetBindingInfo(const TypeDef: IXMLTypeDef): IXMLDataTypeBinding; overload;
+    function GetBindingInfo(const ComplexTypeDef: IXMLComplexTypeDef): IXMLComplexTypeBinding; overload;
+    function GetBindingInfo(const PropertyItem: IXMLTypedSchemaItem): IXMLPropertyBinding; overload;
+    function GetListBindingInfo(const TypeDef: IXMLTypeDef): IXMLDataTypeListBinding;
+    function GenerateBinding(const BindableItems: IInterfaceList;
+      const Writers: array of TCodeWriterClass): string; overload;
+    function GenerateBinding(const BindableItem: IXMLComplexTypeDef;
+      const Writers: array of TCodeWriterClass): string; overload;
+    procedure SetOnIdentifierCheck(const Value: TIdentifierCheckEvent);
+    function SchemaTypeToNativeType(const XMLType: Variant): string;
+
+    property BindingAppInfoURI: DOMString;
+    property ClassNameStr: string;
+    property CodeGenOptions: TBindingOptions;
+    property NativeTypeMap: TBindingOptions;
+  end;
+
+{ *** Classes *** }
+
+{ TXMLBindingAppInfo }
+
+  TXMLBindingAppInfo = class(TXMLAnnotationItem, IXMLBindingAppInfo)
+  protected
+    function GetValue(const AttrName: DOMString): Variant;
+    procedure SetValue(const AttrName: DOMString; const Value: Variant);
+    { IXMLBindingAppInfo }
+    function GetBindingAppInfoURI: DOMString;
+    function GetBound: Variant;
+    function GetDataType: Variant;
+    function GetDocElement: Variant;
+    function GetIdentifierName: Variant;
+    function GetPropReadOnly: Variant;
+    function GetRepeated: Variant;
+    function HasValueFor(const AttrName: DOMString): Boolean;
+    procedure RemoveValue(const AttrName: DOMString);
+    procedure SetBindingAppInfoURI(const Value: DOMString);
+    procedure SetBound(const Value: Variant);
+    procedure SetDataType(const Value: Variant);
+    procedure SetDocElement(const Value: Variant);
+    procedure SetIdentifierName(const Value: Variant);
+    procedure SetPropReadOnly(const Value: Variant);
+    procedure SetRepeated(const Value: Variant);
+  end;
+
+{ TXMLBindingInfo }
+
+  TXMLBindingInfo = class(TInterfacedObject, IXMLBindingInfo)
+  protected
+    function GetBindingAppInfo: IXMLBindingAppInfo;
+    function HasAppInfo(const AppInfoName: string): Boolean;
+    function MakeIdentifier: string; virtual;
+    procedure RemoveAppInfo(const AppInfoName: string);
+    property BindingManager: IXMLBindingManager;
+  protected
+    { IXMLBindingInfo }
+    function GetBindingType: TXMLBindingType; virtual; abstract;
+    function GetBound: Boolean; virtual;
+    function GetDataType: string; virtual; abstract;
+    function GetDocumentation: string;
+    function GetIdentifierName: string; virtual;
+    function GetSourceName: string;
+    function GetSourceType: string; virtual; abstract;
+    procedure SetBindingType(const Value: TXMLBindingType); virtual;
+    procedure SetBound(const Value: Boolean);
+    procedure SetDataType(const Value: string);
+    procedure SetDocumentation(const Value: string);
+    procedure SetIdentifierName(const Value: string); virtual;
+    { Data member access }
+    property BindingAppInfo: IXMLBindingAppInfo;
+    property SchemaItem: IXMLSchemaItem;
+  public
+    constructor Create(const ASchemaItem: IXMLSchemaItem;
+      const BindingManager: IXMLBindingManager);
+  end;
+
+
+{ TXMLDataTypeBinding }
+
+  TXMLDataTypeBinding = class(TXMLBindingInfo, IXMLDataTypeBinding)
+  protected
+    { IXMLDataTypeBinding }
+    function GetRepeated: Boolean; virtual;
+    function TypeDef: IXMLTypeDef;
+    procedure SetRepeated(const Value: Boolean);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLSimpleTypeBinding }
+
+  TXMLSimpleTypeBinding = class(TXMLDataTypeBinding, IXMLDataTypeBinding)
+  protected
+    { IXMLBindingInfo }
+    function GetBindingType: TXMLBindingType; override;
+    function GetDataType: string; override;
+    function GetIdentifierName: string; override;
+    function GetSourceType: string; override;
+    function SimpleTypeDef: IXMLSimpleTypeDef;
+    procedure SetIdentifierName(const Value: string); override;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLComplexTypeBinding }
+
+  TXMLComplexTypeBinding = class(TXMLDataTypeBinding, IXMLComplexTypeBinding)
+  protected
+    function BaseBindingInfo: IXMLComplexTypeBinding;
+    function HasComplexBase: Boolean;
+    function MakeIdentifier: string; override;
+  protected
+    { IXMLBindingInfo }
+    function GetBindingType: TXMLBindingType; override;
+    function GetDataType: string; override;
+    function GetSourceType: string; override;
+    { IXMLComplexTypeBinding }
+    function AncestorClass: string; virtual;
+    function AncestorInterface: string; virtual;
+    function ClassIdent: string; virtual;
+    function CollectionItem: IXMLPropertyBinding;
+    function CollectionItemName: string;
+    function ComplexTypeDef: IXMLComplexTypeDef;
+    function GetDocElementName: DOMString;
+    function IsDocElement: Boolean;
+    function PureCollection: Boolean;
+    procedure SetDocElementName(const Value: DOMString);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLDataTypeListBinding }
+
+  TXMLDataTypeListBinding = class(TXMLComplexTypeBinding, IXMLDataTypeListBinding)
+  protected
+    function AncestorClass: string; override;
+    function AncestorInterface: string; override;
+    function ClassIdent: string; override;
+    function CollectionItemName: string;
+    function GetIdentifierName: string; override;
+    function GetRepeated: Boolean; override;
+    function ItemBindInfo: IXMLDataTypeBinding;
+    function PureCollection: Boolean;
+    property ListTypeSuffix: string;
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TXMLPropertyBinding }
+
+  TXMLPropertyBinding = class(TXMLBindingInfo, IXMLPropertyBinding)
+  protected
+    function ReadDataType: string;
+    { IXMLBindingInfo }
+    function GetBindingType: TXMLBindingType; override;
+    function GetBound: Boolean; override;
+    function GetDataType: string; override;
+    function GetSchemaItem: IXMLTypedSchemaItem;
+    function GetSourceType: string; override;
+    procedure SetBindingType(const Value: TXMLBindingType); override;
+    { IXMLPropertyBinding }
+    function TypeBindInfo: IXMLDataTypeBinding;
+    function GetPropReadOnly: Boolean;
+    function IsListProp: Boolean;
+    procedure SetPropReadOnly(const Value: Boolean);
+    procedure SetDataType(const Value: string);
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ =========================================================================== }
+{                     Code Generation Classes                                 }
+{ =========================================================================== }
+
+{ TCodeWriter }
+
+{ Contains methods used for writing code structures which are common to
+  different elements of the generated unit.  This is the base class for
+  all other code writers. }
+
+  TCodeWriter = class(TStringList)
+  protected
+    function PropGetPrefix: string;
+    function PropSetPrefix: string;
+    property BindingManager: IXMLBindingManager;
+  public
+    constructor Create(BindingManager: IXMLBindingManager); reintroduce;
+    procedure Generate(const BindingInfo: IXMLComplexTypeBinding); virtual;
+    procedure Changed; override;
+    procedure Write(const Code: string; Indent: Integer = 0); overload;
+    procedure Write(const FmtLine: string; Params: array of const;
+      Indent: Integer = 0); overload;
+    procedure WriteLine;
+    procedure WriteAfterConstruction(const OverrideStr: string = ''; Indent: Integer = 0);
+    procedure WriteRegisterChildNode(const TagName, ChildClass: string);
+    procedure WriteClassDecl(const Name, AncestorName, IntfName: string);
+    procedure WriteCollCreate(const DataMember, CollClass, ItemInterface,
+      ItemTag, CollInterface: string);
+    procedure WriteCollGetItem(const DataType: string; Indent: Integer = 0);
+    procedure WriteCollItemInit(const ItemTag, ItemInterface: string);
+    procedure WriteCollItemProp(const DataType: string);
+    procedure WriteComment(const Comment: string; Indent: Integer = 0;
+      LinePadding: Integer = 0);
+    procedure WriteDataMember(const Name, DataType: string);
+    procedure WriteDataProperty(const Name, DataType: string; HasWriter: Boolean);
+    procedure WriteDeclComment(const Comment: string; LinePadding: Integer = 2);
+    procedure WriteFunction(const FuncCode, DataType: string; Indent: Integer = 0); overload;
+    procedure WriteFunction(const FuncName, DataType: string;
+      const ParamNames, ParamTypes: array of string; Indent: Integer = 0); overload;
+    procedure WriteGetMethod(const Name, DataType: string;
+      Indent: Integer; Indexed: Boolean = False);
+    procedure WriteGetBindFunc(const SourceName, DataType: string);
+    procedure WriteLoadBindFunc(const SourceName, DataType: string);
+    procedure WriteNewBindFunc(const SourceName, DataType: string);
+    procedure WriteGuid;
+    procedure WriteIntfDecl(const Name, AncestorType: string);
+    procedure WriteMethodBody(const Template: string; Params: array of const);
+    procedure WriteProperty(const Name, DataType: string; HasWriter: Boolean;
+      Indexed: Boolean = False);
+    procedure WriteSetMethod(const Name, DataType: string;
+      Indent: Integer; Indexed: Boolean = False);
+    property Modified: Boolean;
+  end;
+
+{ TForwardDecl }
+
+  TForwardDecl = class(TCodeWriter)
+  public
+    procedure AfterConstruction; override;
+  end;
+
+{ TPropertyContainer }
+
+{ Base class for interface and implementation section entries which contain
+  property declarations and code. }
+
+  PCodeWriter = ^TCodeWriter;
+  TCodeWriterArray = array of TCodeWriter;
+
+  TPropertyContainer = class(TCodeWriter)
+  protected
+    procedure AppendCode; overload;
+    procedure AppendCode(const CodeLists: array of TCodeWriter); overload;
+    procedure InitCodeWriters(CodeWriters: array of PCodeWriter;
+      CodeLines: array of string);
+    procedure WriteCollectionMethods(Writer: TCodeWriter;
+      ItemInfo: IXMLDataTypeBinding; Indent: Integer); virtual;
+    procedure WriteCollAdd(Writer: TCodeWriter; ItemInfo: IXMLDataTypeBinding;
+      Indent: Integer); virtual;
+    procedure WriteCollInsert(Writer: TCodeWriter; ItemInfo: IXMLDataTypeBinding;
+      Indent: Integer); virtual;
+    procedure WriteListBinding(const ItemInfo: IXMLDataTypeBinding); virtual;
+    procedure WriteMethods; virtual;
+    procedure WriteProperties; virtual;
+    procedure WriteProperty(const PropBindInfo: IXMLPropertyBinding;
+      const Indexed: Boolean); virtual;
+    property BindingInfo: IXMLComplexTypeBinding;
+    property CodeWriters: TCodeWriterArray;
+    property TypeDef: IXMLComplexTypeDef;
+  public
+    destructor Destroy; override;
+    procedure Generate(const BindingInfo: IXMLComplexTypeBinding); override;
+  end;
+
+{ TIntfSectionEntry }
+
+{ Base class for Interface and Class Declarations }
+
+  TIntfSectionEntry = class(TPropertyContainer)
+  protected
+    GetMethods: TCodeWriter;
+    SetMethods: TCodeWriter;
+    PrivateItems: TCodeWriter;
+    ProtectedItems: TCodeWriter;
+    PublicItems: TCodeWriter;
+    PublishedItems: TCodeWriter;
+    procedure WriteDecl; virtual;
+  public
+    procedure Generate(const BindingInfo: IXMLComplexTypeBinding); override;
+  end;
+
+{ TIntfForward }
+
+  TIntfForward = class(TForwardDecl)
+  public
+    procedure Generate(const BindingInfo: IXMLComplexTypeBinding); override;
+  end;
+
+{ TIntfDecl }
+
+  TIntfDecl = class(TIntfSectionEntry)
+  protected
+    procedure WriteDecl; override;
+    procedure WriteListBinding(const ItemInfo: IXMLDataTypeBinding); override;
+    procedure WriteProperty(const PropBindInfo: IXMLPropertyBinding;
+      const Indexed: Boolean); override;
+  end;
+
+{ TClassForward }
+
+  TClassForward = class(TForwardDecl)
+  public
+    procedure Generate(const BindingInfo: IXMLComplexTypeBinding); override;
+  end;
+
+{ TClassDecl }
+
+  TClassDecl = class(TIntfSectionEntry)
+  protected
+    procedure WriteDecl; override;
+    procedure WriteListBinding(const ItemInfo: IXMLDataTypeBinding); override;
+    procedure WriteProperties; override;
+    procedure WriteProperty(const PropBindInfo: IXMLPropertyBinding;
+      const Indexed: Boolean); override;
+    property NeedsRegCode: Boolean;
+  end;
+
+{ TXMLBindingManager }
+
+  TXMLBindingManager = class(TInterfacedObject, IXMLBindingManager)
+  protected
+    { IXMLBindingManger Property Accessors }
+    function GetClassNameStr: string;
+    function GetBindingAppInfoURI: DOMString;
+    function GetCodeGenOptions: TBindingOptions;
+    function GetNativeTypeMap: TBindingOptions;
+    procedure SetBindingAppInfoURI(const Value: DOMString);
+    procedure SetClassNameStr(const Value: string);
+    { IXMLBindingManager Methods }
+    procedure DoIdentifierCheck(var Identifier: string);
+    function GetBindableItems(const Schema: IXMLSchemaDef): IInterfaceList;
+    function GetBindingInfo(const ASchemaItem: IInterface): IXMLBindingInfo; overload;
+    function GetBindingInfo(const TypeDef: IXMLTypeDef): IXMLDataTypeBinding; overload;
+    function GetBindingInfo(const ComplexTypeDef: IXMLComplexTypeDef): IXMLComplexTypeBinding; overload;
+    function GetBindingInfo(const PropertyItem: IXMLTypedSchemaItem): IXMLPropertyBinding; overload;
+    function GetListBindingInfo(const TypeDef: IXMLTypeDef): IXMLDataTypeListBinding;
+    function GenerateBinding(const BindableItems: IInterfaceList;
+      const Writers: array of TCodeWriterClass): string; overload;
+    function GenerateBinding(const BindableItem: IXMLComplexTypeDef;
+      const Writers: array of TCodeWriterClass): string; overload;
+    function SchemaTypeToNativeType(const XMLType: Variant): string;
+    procedure SetOnIdentifierCheck(const Value: TIdentifierCheckEvent);
+  public
+    destructor Destroy; override;
+    procedure AfterConstruction; override;
+  end;
+
+procedure MakeValidIdent(var Ident: string);
+
+implementation

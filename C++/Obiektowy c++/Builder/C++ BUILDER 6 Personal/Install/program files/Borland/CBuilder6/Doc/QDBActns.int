@@ -1,0 +1,112 @@
+{ *************************************************************************** }
+{                                                                             }
+{ Delphi and Kylix Cross-Platform Visual Component Library                    }
+{                                                                             }
+{ Copyright (c) 1999, 2001 Borland Software Corporation                       }
+{                                                                             }
+{ Licensees holding a valid Borland No-Nonsense License for this Software may }
+{ use this file in accordance with such license, which appears in the file    }
+{ license.txt that came with this Software.                                   }
+{                                                                             }
+{ *************************************************************************** }
+
+unit QDBActns;
+
+{$H+,X+}
+
+interface
+
+uses Classes, DB, QActnList;
+
+type
+  { DataSet actions }
+  TDataSetAction = class(TAction)
+  protected
+    function GetDataSet(Target: TObject): TDataSet; virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    function HandlesTarget(Target: TObject): Boolean; override;
+    property DataSource: TDataSource;
+  end;
+
+  TDataSetFirst = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetPrior = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetNext = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetLast = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetInsert = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetDelete = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetEdit = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetPost = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetCancel = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+  TDataSetRefresh = class(TDataSetAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property DataSource;
+  end;
+
+implementation

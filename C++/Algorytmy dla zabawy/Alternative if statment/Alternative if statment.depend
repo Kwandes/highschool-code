@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1488550544 source:c:\users\jbogoryja\desktop\c++\algorytmy dla zabawy\alternative if statment\main.cpp
+	<iostream>
+	<cstdio>
+	<cstdlib>
+	<time.h>
+

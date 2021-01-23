@@ -1,0 +1,21 @@
+# depslib dependency file v1.0
+1485821645 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\quiz\main.cpp
+	<iostream>
+	"quiz.h"
+
+1485821698 c:\users\kwandes\desktop\c++\algorytmy dla zabawy\quiz\quiz.h
+	<iostream>
+
+1485821277 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\quiz\quiz.cpp
+	<iostream>
+	"quiz.h"
+
+1485823214 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\quiz\add.cpp
+	<iostream>
+	"quiz.h"
+	<fstream>
+
+1485821275 source:c:\users\kwandes\desktop\c++\algorytmy dla zabawy\quiz\start.cpp
+	<iostream>
+	"quiz.h"
+

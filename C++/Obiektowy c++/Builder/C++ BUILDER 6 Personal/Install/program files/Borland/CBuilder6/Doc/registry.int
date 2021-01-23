@@ -1,0 +1,147 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Delphi Runtime Library                                                  }
+{                                                                         }
+{ Copyright (c) 1995-2001 Borland Software Corporation                    }
+{                                                                         }
+{ *********************************************************************** }
+
+unit Registry;
+
+{$R-,T-,H+,X+}
+
+interface
+
+uses {$IFDEF LINUX} WinUtils, {$ENDIF} Windows, Classes, SysUtils, IniFiles;
+
+type
+  ERegistryException = class(Exception);
+
+  TRegKeyInfo = record
+    NumSubKeys: Integer;
+    MaxSubKeyLen: Integer;
+    NumValues: Integer;
+    MaxValueLen: Integer;
+    MaxDataLen: Integer;
+    FileTime: TFileTime;
+  end;
+
+  TRegDataType = (rdUnknown, rdString, rdExpandString, rdInteger, rdBinary);
+
+  TRegDataInfo = record
+    RegData: TRegDataType;
+    DataSize: Integer;
+  end;
+
+  TRegistry = class(TObject)
+  protected
+    procedure ChangeKey(Value: HKey; const Path: string);
+    function GetBaseKey(Relative: Boolean): HKey;
+    function GetData(const Name: string; Buffer: Pointer;
+      BufSize: Integer; var RegData: TRegDataType): Integer;
+    function GetKey(const Key: string): HKEY;
+    procedure PutData(const Name: string; Buffer: Pointer; BufSize: Integer; RegData: TRegDataType);
+    procedure SetCurrentKey(Value: HKEY);
+  public
+    constructor Create; overload;
+    constructor Create(AAccess: LongWord); overload;
+    destructor Destroy; override;
+    procedure CloseKey;
+    function CreateKey(const Key: string): Boolean;
+    function DeleteKey(const Key: string): Boolean;
+    function DeleteValue(const Name: string): Boolean;
+    function GetDataInfo(const ValueName: string; var Value: TRegDataInfo): Boolean;
+    function GetDataSize(const ValueName: string): Integer;
+    function GetDataType(const ValueName: string): TRegDataType;
+    function GetKeyInfo(var Value: TRegKeyInfo): Boolean;
+    procedure GetKeyNames(Strings: TStrings);
+    procedure GetValueNames(Strings: TStrings);
+    function HasSubKeys: Boolean;
+    function KeyExists(const Key: string): Boolean;
+    function LoadKey(const Key, FileName: string): Boolean;
+    procedure MoveKey(const OldName, NewName: string; Delete: Boolean);
+    function OpenKey(const Key: string; CanCreate: Boolean): Boolean;
+    function OpenKeyReadOnly(const Key: String): Boolean;
+    function ReadCurrency(const Name: string): Currency;
+    function ReadBinaryData(const Name: string; var Buffer; BufSize: Integer): Integer;
+    function ReadBool(const Name: string): Boolean;
+    function ReadDate(const Name: string): TDateTime;
+    function ReadDateTime(const Name: string): TDateTime;
+    function ReadFloat(const Name: string): Double;
+    function ReadInteger(const Name: string): Integer;
+    function ReadString(const Name: string): string;
+    function ReadTime(const Name: string): TDateTime;
+    function RegistryConnect(const UNCName: string): Boolean;
+    procedure RenameValue(const OldName, NewName: string);
+    function ReplaceKey(const Key, FileName, BackUpFileName: string): Boolean;
+    function RestoreKey(const Key, FileName: string): Boolean;
+    function SaveKey(const Key, FileName: string): Boolean;
+    function UnLoadKey(const Key: string): Boolean;
+    function ValueExists(const Name: string): Boolean;
+    procedure WriteCurrency(const Name: string; Value: Currency);
+    procedure WriteBinaryData(const Name: string; var Buffer; BufSize: Integer);
+    procedure WriteBool(const Name: string; Value: Boolean);
+    procedure WriteDate(const Name: string; Value: TDateTime);
+    procedure WriteDateTime(const Name: string; Value: TDateTime);
+    procedure WriteFloat(const Name: string; Value: Double);
+    procedure WriteInteger(const Name: string; Value: Integer);
+    procedure WriteString(const Name, Value: string);
+    procedure WriteExpandString(const Name, Value: string);
+    procedure WriteTime(const Name: string; Value: TDateTime);
+    property CurrentKey: HKEY;
+    property CurrentPath: string;
+    property LazyWrite: Boolean;
+    property RootKey: HKEY;
+    property Access: LongWord;
+  end;
+
+  TRegIniFile = class(TRegistry)
+  public
+    constructor Create(const FileName: string); overload;
+    constructor Create(const FileName: string; AAccess: LongWord); overload;
+    function ReadString(const Section, Ident, Default: string): string;
+    function ReadInteger(const Section, Ident: string;
+      Default: Longint): Longint;
+    procedure WriteInteger(const Section, Ident: string; Value: Longint);
+    procedure WriteString(const Section, Ident, Value: String);
+    function ReadBool(const Section, Ident: string; Default: Boolean): Boolean;
+    procedure WriteBool(const Section, Ident: string; Value: Boolean);
+    procedure ReadSection(const Section: string; Strings: TStrings);
+    procedure ReadSections(Strings: TStrings);
+    procedure ReadSectionValues(const Section: string; Strings: TStrings);
+    procedure EraseSection(const Section: string);
+    procedure DeleteKey(const Section, Ident: String);
+    property FileName: string;
+  end;
+
+  TRegistryIniFile = class(TCustomIniFile)
+  public
+    constructor Create(const FileName: string); overload;
+    constructor Create(const FileName: string; AAccess: LongWord); overload;
+    destructor Destroy; override;
+    function ReadDate(const Section, Name: string; Default: TDateTime): TDateTime; override;
+    function ReadDateTime(const Section, Name: string; Default: TDateTime): TDateTime; override;
+    function ReadInteger(const Section, Ident: string; Default: Longint): Longint; override;
+    function ReadFloat(const Section, Name: string; Default: Double): Double; override;
+    function ReadString(const Section, Ident, Default: string): string; override;
+    function ReadTime(const Section, Name: string; Default: TDateTime): TDateTime; override;
+    function ReadBinaryStream(const Section, Name: string; Value: TStream): Integer; override;
+//    procedure ReadKeys(const Section: string; Sections: TStrings);
+    procedure WriteDate(const Section, Name: string; Value: TDateTime); override;
+    procedure WriteDateTime(const Section, Name: string; Value: TDateTime); override;
+    procedure WriteFloat(const Section, Name: string; Value: Double); override;
+    procedure WriteInteger(const Section, Ident: string; Value: Longint); override;
+    procedure WriteString(const Section, Ident, Value: String); override;
+    procedure WriteTime(const Section, Name: string; Value: TDateTime); override;
+    procedure WriteBinaryStream(const Section, Name: string; Value: TStream); override;
+    procedure ReadSection(const Section: string; Strings: TStrings); override;
+    procedure ReadSections(Strings: TStrings); override;
+    procedure ReadSectionValues(const Section: string; Strings: TStrings); override;
+    procedure EraseSection(const Section: string); override;
+    procedure DeleteKey(const Section, Ident: String); override;
+    procedure UpdateFile; override;
+
+    property RegIniFile: TRegIniFile;
+  end;
+
+implementation

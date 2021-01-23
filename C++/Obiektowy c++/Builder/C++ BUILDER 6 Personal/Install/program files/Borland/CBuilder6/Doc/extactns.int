@@ -1,0 +1,460 @@
+
+{*******************************************************}
+{                                                       }
+{       Borland Delphi Visual Component Library         }
+{                                                       }
+{  Copyright (c) 1995-2001 Borland Software Corporation }
+{                                                       }
+{*******************************************************}
+
+unit ExtActns;
+
+interface
+
+uses SysUtils, Windows, Controls, Classes, ComCtrls, Graphics, ActnList, StdActns,
+  StdCtrls, ShellAPI, Dialogs, ExtDlgs, Registry, ImgList, UrlMon, ActiveX;
+
+type
+
+{ TFileRun }
+
+  TShowCmd = (scHide, scMaximize, scMinimize, scRestore, scShow, scShowDefault,
+    scShowMaximized, scShowMinimized, scShowMinNoActive, scShowNA,
+    scShowNoActivate, scShowNormal);
+
+  TCustomFileRun = class(TCustomAction)
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation);
+      override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    procedure ExecuteTarget(Target: TObject); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+    procedure SetupBrowseDialog;
+    property HInst: HInst;
+    procedure UpdateTarget(Target: TObject); override;
+    property Browse: Boolean;
+    property BrowseDlg: TOpenDialog;
+    property Directory: TFileName;
+    property FileName: TFileName;
+    property Operation: String;
+    property ParentControl: TWinControl;
+    property Parameters: String;
+    property ShowCmd: TShowCmd;
+  end;
+
+  TFileRun = class(TCustomFileRun)
+  published
+    property Browse;
+    property BrowseDlg;
+    property Caption;
+    property Directory;
+    property Enabled;
+    property FileName;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property Operation;
+    property ParentControl;
+    property Parameters;
+    property ShowCmd;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+  end;
+
+{ TRichEditAction }
+
+  TRichEditAction = class(TEditAction)
+  protected
+    function CurrText(Edit: TCustomRichEdit): TTextAttributes;
+    procedure SetFontStyle(Edit: TCustomRichEdit; Style: TFontStyle);
+  public
+    constructor Create(AOwner: TComponent); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+  end;
+
+{ TRichEditBold }
+
+  TRichEditBold = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditItalic }
+
+  TRichEditItalic = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditUnderline }
+
+  TRichEditUnderline = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditStrikeOut }
+
+  TRichEditStrikeOut = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditBullets }
+
+  TRichEditBullets = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditAlignLeft }
+
+  TRichEditAlignLeft = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditAlignRight }
+
+  TRichEditAlignRight = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TRichEditAlignCenter }
+
+  TRichEditAlignCenter = class(TRichEditAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  end;
+
+{ TTabAction }
+
+  TTabAction = class;
+  TValidateTabEvent = procedure(Sender: TTabAction; TabControl: TCustomTabControl;
+    var Enabled: Boolean) of object;
+
+  TTabAction = class(TCustomAction)
+  protected
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure SelectNextTab(GoForward: Boolean = True);
+  public
+    constructor Create(AOwner: TComponent); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+    procedure UpdateTarget(Target: TObject); override;
+    property SkipHiddenTabs :Boolean default True;
+    property TabControl: TCustomTabControl;
+    property Wrap: Boolean default False;
+    property BeforeTabChange: TNotifyEvent;
+    property AfterTabChange: TNotifyEvent;
+    property OnValidateTab: TValidateTabEvent;
+  end;
+
+{ TPreviousTab }
+
+  TPreviousTab = class(TTabAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property TabControl;
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SkipHiddenTabs;    
+    property Visible;
+    property Wrap;
+    property AfterTabChange;
+    property BeforeTabChange;
+    property OnHint;
+    property OnValidateTab;
+  end;
+
+{ TNextTab }
+
+  TNextTab = class(TTabAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property LastTabCaption: String;
+    property TabControl;
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SkipHiddenTabs;    
+    property Visible;
+    property Wrap;
+    property AfterTabChange;
+    property BeforeTabChange;
+    property OnFinish: TNotifyEvent;
+    property OnHint;
+    property OnValidateTab;
+  end;
+
+{ TOpenPicture }
+
+  TOpenPicture = class(TCommonDialogAction)
+  protected
+    function Getdialogclass: TCommonDialogClass; override;
+  published
+    property Dialog: TOpenPictureDialog;
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+    property OnUpdate;
+    property OnAccept;
+    property OnCancel;
+  end;
+
+{ TSavePicture }
+
+  TSavePicture = class(TCommonDialogAction)
+  protected
+    function Getdialogclass: TCommonDialogClass; override;
+  published
+    property Dialog: TSavePictureDialog;
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+    property OnUpdate;
+    property OnAccept;
+    property OnCancel;
+  end;
+
+{ TURLAction }
+
+  TURLAction = class(TCustomAction)
+  public
+    function HandlesTarget(Target: TObject): Boolean; override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property URL: String;
+    property OnHint;
+  end;
+
+{ TBrowserURL }
+
+  TBrowseURL = class(TURLAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property URL;
+    property OnHint;
+  end;
+
+{ TDownLoadURL }
+
+  TURLDownloadStatus = (dsFindingResource, dsConnecting, dsRedirecting,
+    dsBeginDownloadData, dsDownloadingData, dsEndDownloadData,
+    dsBeginDownloadComponents, dsInstallingComponents,
+    dsEndDownloadComponents, dsUsingCachedCopy, dsSendingRequest,
+    dsClassIDAvailable, dsMIMETypeAvailable, dsCacheFileNameAvailable,
+    dsBeginSyncOperation, dsEndSyncOperation, dsBeginUploadData,
+    dsUploadingData, dsEndUploadData, dsProtocolClassID, dsEncoding,
+    dsVerifiedMIMETypeAvailable, dsClassInstallLocation, dsDecoding,
+    dsLoadingMIMIHandler);
+
+  TDownLoadURL = class;
+
+  TDownloadProgressEvent = procedure(Sender: TDownLoadURL; Progress,
+    ProgressMax: Cardinal; StatusCode: TURLDownloadStatus; StatusText: String;
+    var Cancel: Boolean) of object;
+
+  TDownLoadURL = class(TURLAction, IBindStatusCallback)
+  protected
+    { IBindStatusCallback }
+    function GetBindInfo(out grfBINDF: Cardinal;
+      var bindinfo: _tagBINDINFO): HRESULT; stdcall;
+    function GetPriority(out nPriority): HRESULT; stdcall;
+    function OnDataAvailable(grfBSCF: Cardinal; dwSize: Cardinal;
+      formatetc: PFormatEtc; stgmed: PStgMedium): HRESULT; stdcall;
+    function OnLowResource(reserved: Cardinal): HRESULT; stdcall;
+    function OnObjectAvailable(const iid: TGUID; punk: IUnknown): HRESULT; stdcall;
+    function OnProgress(ulProgress: Cardinal; ulProgressMax: Cardinal;
+      ulStatusCode: Cardinal; szStatusText: PWideChar): HRESULT; stdcall;
+    function OnStartBinding(dwReserved: Cardinal; pib: IBinding): HRESULT; stdcall;
+    function OnStopBinding(hresult: HRESULT; szError: PWideChar): HRESULT; stdcall;
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property Filename: TFilename;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property URL;
+    property OnHint;
+    property OnUpdate;
+    property OnDownloadProgress: TDownloadProgressEvent;
+  end;
+
+{ TSendMail }
+
+  TSendMail = class(TCustomAction)
+  public
+    destructor Destroy; override;
+    procedure ExecuteTarget(Target: TObject); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Text: TStrings;
+    property Visible;
+    property OnHint;
+    property OnUpdate;
+  end;
+
+{ TListControlAction }
+
+  TListControlAction = class(TCustomAction)
+  protected
+    function IsEnabled(Target: TObject): Boolean;
+    procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+  public
+    constructor Create(AOwner: TComponent); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+    property ListControl: TCustomListControl;
+  end;
+
+{ TListControlSelectAll }
+
+  TListControlSelectAll = class(TListControlAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ListControl;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+  end;
+
+{ TListControlClearSelection }
+
+  TListControlClearSelection = class(TListControlAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ListControl;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+  end;
+
+{ TListControlDeleteSelection }
+
+  TListControlDeleteSelection = class(TListControlAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ListControl;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+  end;
+
+{ TListBoxCopySelection }
+
+  TListControlCopySelection = class(TListControlAction)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+    function HandlesTarget(Target: TObject): Boolean; override;
+    procedure UpdateTarget(Target: TObject); override;
+  published
+    property Caption;
+    property Destination: TCustomListControl;
+    property Enabled;
+    property HelpContext;
+    property Hint;
+    property ImageIndex;
+    property ListControl;
+    property ShortCut;
+    property SecondaryShortCuts;
+    property Visible;
+    property OnHint;
+  end;
+
+{ TListControlMoveSelection }
+
+  TListControlMoveSelection = class(TListControlCopySelection)
+  public
+    procedure ExecuteTarget(Target: TObject); override;
+  end;
+
+implementation

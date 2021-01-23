@@ -1,0 +1,438 @@
+
+{ *********************************************************************** }
+{                                                                         }
+{ Delphi / Kylix Cross-Platform Runtime Library                           }
+{                                                                         }
+{ Copyright (c) 1996, 2001 Borland Software Corporation                   }
+{                                                                         }
+{ *********************************************************************** }
+
+unit Math;
+
+{ This unit contains high-performance arithmetic, trigonometric, logorithmic,
+  statistical, financial calculation and FPU routines which supplement the math
+  routines that are part of the Delphi language or System unit.
+
+  References:
+  1) P.J. Plauger, "The Standard C Library", Prentice-Hall, 1992, Ch. 7.
+  2) W.J. Cody, Jr., and W. Waite, "Software Manual For the Elementary
+     Functions", Prentice-Hall, 1980.
+  3) Namir Shammas, "C/C++ Mathematical Algorithms for Scientists and Engineers",
+     McGraw-Hill, 1995, Ch 8.
+  4) H.T. Lau, "A Numerical Library in C for Scientists and Engineers",
+     CRC Press, 1994, Ch. 6.
+  5) "Pentium(tm) Processor User's Manual, Volume 3: Architecture
+     and Programming Manual", Intel, 1994
+
+  Some of the functions, concepts or constants in this unit were provided by
+  Earl F. Glynn (www.efg2.com) and Ray Lischner (www.tempest-sw.com)
+
+  All angle parameters and results of trig functions are in radians.
+
+  Most of the following trig and log routines map directly to Intel 80387 FPU
+  floating point machine instructions.  Input domains, output ranges, and
+  error handling are determined largely by the FPU hardware.
+
+  Routines coded in assembler favor the Pentium FPU pipeline architecture.
+}
+
+{$N+,S-}
+
+interface
+
+uses SysUtils, Types;
+
+const   { Ranges of the IEEE floating point types, including denormals }
+  MinSingle   =  1.5e-45;
+  MaxSingle   =  3.4e+38;
+  MinDouble   =  5.0e-324;
+  MaxDouble   =  1.7e+308;
+  MinExtended =  3.4e-4932;
+  MaxExtended =  1.1e+4932;
+  MinComp     = -9.223372036854775807e+18;
+  MaxComp     =  9.223372036854775807e+18;
+
+  { The following constants should not be used for comparison, only
+    assignments. For comparison please use the IsNan and IsInfinity functions
+    provided below. }
+  NaN         =  0.0 / 0.0;
+  (*$EXTERNALSYM NaN*)
+  (*$HPPEMIT 'static const Extended NaN = 0.0 / 0.0;'*)
+  Infinity    =  1.0 / 0.0;
+  (*$EXTERNALSYM Infinity*)
+  (*$HPPEMIT 'static const Extended Infinity = 1.0 / 0.0;'*)
+  NegInfinity = -1.0 / 0.0;
+  (*$EXTERNALSYM NegInfinity*)
+  (*$HPPEMIT 'static const Extended NegInfinity = -1.0 / 0.0;'*)
+
+{ Trigonometric functions }
+function ArcCos(const X: Extended): Extended;  { IN: |X| <= 1  OUT: [0..PI] radians }
+function ArcSin(const X: Extended): Extended;  { IN: |X| <= 1  OUT: [-PI/2..PI/2] radians }
+
+{ ArcTan2 calculates ArcTan(Y/X), and returns an angle in the correct quadrant.
+  IN: |Y| < 2^64, |X| < 2^64, X <> 0   OUT: [-PI..PI] radians }
+function ArcTan2(const Y, X: Extended): Extended;
+
+{ SinCos is 2x faster than calling Sin and Cos separately for the same angle }
+procedure SinCos(const Theta: Extended; var Sin, Cos: Extended) register;
+function Tan(const X: Extended): Extended;
+function Cotan(const X: Extended): Extended;           { 1 / tan(X), X <> 0 }
+function Secant(const X: Extended): Extended;          { 1 / cos(X) }
+function Cosecant(const X: Extended): Extended;        { 1 / sin(X) }
+function Hypot(const X, Y: Extended): Extended;        { Sqrt(X**2 + Y**2) }
+
+{ Angle unit conversion routines }
+function RadToDeg(const Radians: Extended): Extended;  { Degrees := Radians * 180 / PI }
+function RadToGrad(const Radians: Extended): Extended; { Grads := Radians * 200 / PI }
+function RadToCycle(const Radians: Extended): Extended;{ Cycles := Radians / 2PI }
+
+function DegToRad(const Degrees: Extended): Extended;  { Radians := Degrees * PI / 180}
+function DegToGrad(const Degrees: Extended): Extended;
+function DegToCycle(const Degrees: Extended): Extended;
+
+function GradToRad(const Grads: Extended): Extended;   { Radians := Grads * PI / 200 }
+function GradToDeg(const Grads: Extended): Extended;
+function GradToCycle(const Grads: Extended): Extended;
+
+function CycleToRad(const Cycles: Extended): Extended; { Radians := Cycles * 2PI }
+function CycleToDeg(const Cycles: Extended): Extended;
+function CycleToGrad(const Cycles: Extended): Extended;
+
+{ Hyperbolic functions and inverses }
+function Cot(const X: Extended): Extended;             { simply calls Cotan }
+function Sec(const X: Extended): Extended;             { simply calls Secant }
+function Csc(const X: Extended): Extended;             { simply calls Cosecant }
+function Cosh(const X: Extended): Extended;
+function Sinh(const X: Extended): Extended;
+function Tanh(const X: Extended): Extended;
+function CotH(const X: Extended): Extended;
+function SecH(const X: Extended): Extended;
+function CscH(const X: Extended): Extended;
+function ArcCot(const X: Extended): Extended;
+function ArcSec(const X: Extended): Extended;
+function ArcCsc(const X: Extended): Extended;
+function ArcCosh(const X: Extended): Extended;         { IN: X >= 1 }
+function ArcSinh(const X: Extended): Extended;
+function ArcTanh(const X: Extended): Extended;         { IN: |X| <= 1 }
+function ArcCotH(const X: Extended): Extended;
+function ArcSecH(const X: Extended): Extended;
+function ArcCscH(const X: Extended): Extended;
+
+{ Logorithmic functions }
+function LnXP1(const X: Extended): Extended; { Ln(X + 1), accurate for X near zero }
+function Log10(const X: Extended): Extended;                    { Log base 10 of X }
+function Log2(const X: Extended): Extended;                      { Log base 2 of X }
+function LogN(const Base, X: Extended): Extended;                { Log base N of X }
+
+{ Exponential functions }
+
+{ IntPower: Raise base to an integral power.  Fast. }
+function IntPower(const Base: Extended; const Exponent: Integer): Extended register;
+
+{ Power: Raise base to any power.
+  For fractional exponents, or |exponents| > MaxInt, base must be > 0. }
+function Power(const Base, Exponent: Extended): Extended;
+
+{ Miscellaneous Routines }
+
+{ Frexp:  Separates the mantissa and exponent of X. }
+procedure Frexp(const X: Extended; var Mantissa: Extended; var Exponent: Integer) register;
+
+{ Ldexp: returns X*2**P }
+function Ldexp(const X: Extended; const P: Integer): Extended register;
+
+{ Ceil: Smallest integer >= X, |X| < MaxInt }
+function Ceil(const X: Extended):Integer;
+
+{ Floor: Largest integer <= X,  |X| < MaxInt }
+function Floor(const X: Extended): Integer;
+
+{ Poly: Evaluates a uniform polynomial of one variable at value X.
+    The coefficients are ordered in increasing powers of X:
+    Coefficients[0] + Coefficients[1]*X + ... + Coefficients[N]*(X**N) }
+function Poly(const X: Extended; const Coefficients: array of Double): Extended;
+
+{-----------------------------------------------------------------------
+Statistical functions.
+
+Common commercial spreadsheet macro names for these statistical and
+financial functions are given in the comments preceding each function.
+-----------------------------------------------------------------------}
+
+{ Mean:  Arithmetic average of values.  (AVG):  SUM / N }
+function Mean(const Data: array of Double): Extended;
+
+{ Sum: Sum of values.  (SUM) }
+function Sum(const Data: array of Double): Extended register;
+function SumInt(const Data: array of Integer): Integer register;
+function SumOfSquares(const Data: array of Double): Extended;
+procedure SumsAndSquares(const Data: array of Double;
+  var Sum, SumOfSquares: Extended) register;
+
+{ MinValue: Returns the smallest signed value in the data array (MIN) }
+function MinValue(const Data: array of Double): Double;
+function MinIntValue(const Data: array of Integer): Integer;
+
+function Min(const A, B: Integer): Integer; overload;
+function Min(const A, B: Int64): Int64; overload;
+function Min(const A, B: Single): Single; overload;
+function Min(const A, B: Double): Double; overload;
+function Min(const A, B: Extended): Extended; overload;
+
+{ MaxValue: Returns the largest signed value in the data array (MAX) }
+function MaxValue(const Data: array of Double): Double;
+function MaxIntValue(const Data: array of Integer): Integer;
+
+function Max(const A, B: Integer): Integer; overload;
+function Max(const A, B: Int64): Int64; overload;
+function Max(const A, B: Single): Single; overload;
+function Max(const A, B: Double): Double; overload;
+function Max(const A, B: Extended): Extended; overload;
+
+{ Standard Deviation (STD): Sqrt(Variance). aka Sample Standard Deviation }
+function StdDev(const Data: array of Double): Extended;
+
+{ MeanAndStdDev calculates Mean and StdDev in one call. }
+procedure MeanAndStdDev(const Data: array of Double; var Mean, StdDev: Extended);
+
+{ Population Standard Deviation (STDP): Sqrt(PopnVariance).
+  Used in some business and financial calculations. }
+function PopnStdDev(const Data: array of Double): Extended;
+
+{ Variance (VARS): TotalVariance / (N-1). aka Sample Variance }
+function Variance(const Data: array of Double): Extended;
+
+{ Population Variance (VAR or VARP): TotalVariance/ N }
+function PopnVariance(const Data: array of Double): Extended;
+
+{ Total Variance: SUM(i=1,N)[(X(i) - Mean)**2] }
+function TotalVariance(const Data: array of Double): Extended;
+
+{ Norm:  The Euclidean L2-norm.  Sqrt(SumOfSquares) }
+function Norm(const Data: array of Double): Extended;
+
+{ MomentSkewKurtosis: Calculates the core factors of statistical analysis:
+  the first four moments plus the coefficients of skewness and kurtosis.
+  M1 is the Mean.  M2 is the Variance.
+  Skew reflects symmetry of distribution: M3 / (M2**(3/2))
+  Kurtosis reflects flatness of distribution: M4 / Sqr(M2) }
+procedure MomentSkewKurtosis(const Data: array of Double;
+  var M1, M2, M3, M4, Skew, Kurtosis: Extended);
+
+{ RandG produces random numbers with Gaussian distribution about the mean.
+  Useful for simulating data with sampling errors. }
+function RandG(Mean, StdDev: Extended): Extended;
+
+{-----------------------------------------------------------------------
+General/Misc use functions
+-----------------------------------------------------------------------}
+
+{ Extreme testing }
+
+// Like a infinity, a NaN double value has an exponent of 7FF, but the NaN
+// values have a fraction field that is not 0.
+function IsNan(const AValue: Double): Boolean;
+
+// Like a NaN, an infinity double value has an exponent of 7FF, but the
+// infinity values have a fraction field of 0. Infinity values can be positive
+// or negative, which is specified in the high-order, sign bit.
+function IsInfinite(const AValue: Double): Boolean;
+
+{ Simple sign testing }
+
+type
+  TValueSign = -1..1;
+
+const
+  NegativeValue = Low(TValueSign);
+  ZeroValue = 0;
+  PositiveValue = High(TValueSign);
+
+function Sign(const AValue: Integer): TValueSign; overload;
+function Sign(const AValue: Int64): TValueSign; overload;
+function Sign(const AValue: Double): TValueSign; overload;
+
+{ CompareFloat & SameFloat: If epsilon is not given (or is zero) we will
+  attempt to compute a reasonable one based on the precision of the floating
+  point type used. }
+
+function CompareValue(const A, B: Extended; Epsilon: Extended = 0): TValueRelationship; overload;
+function CompareValue(const A, B: Double; Epsilon: Double = 0): TValueRelationship; overload;
+function CompareValue(const A, B: Single; Epsilon: Single = 0): TValueRelationship; overload;
+function CompareValue(const A, B: Integer): TValueRelationship; overload;
+function CompareValue(const A, B: Int64): TValueRelationship; overload;
+
+function SameValue(const A, B: Extended; Epsilon: Extended = 0): Boolean; overload;
+function SameValue(const A, B: Double; Epsilon: Double = 0): Boolean; overload;
+function SameValue(const A, B: Single; Epsilon: Single = 0): Boolean; overload;
+
+{ IsZero: These will return true if the given value is zero (or very very very
+  close to it). }
+
+function IsZero(const A: Extended; Epsilon: Extended = 0): Boolean; overload;
+function IsZero(const A: Double; Epsilon: Double = 0): Boolean; overload;
+function IsZero(const A: Single; Epsilon: Single = 0): Boolean; overload;
+
+{ Easy to use conditional functions }
+
+function IfThen(AValue: Boolean; const ATrue: Integer; const AFalse: Integer = 0): Integer; overload;
+function IfThen(AValue: Boolean; const ATrue: Int64; const AFalse: Int64 = 0): Int64; overload;
+function IfThen(AValue: Boolean; const ATrue: Double; const AFalse: Double = 0.0): Double; overload;
+
+{ Various random functions }
+
+function RandomRange(const AFrom, ATo: Integer): Integer;
+function RandomFrom(const AValues: array of Integer): Integer; overload;
+function RandomFrom(const AValues: array of Int64): Int64; overload;
+function RandomFrom(const AValues: array of Double): Double; overload;
+
+{ Range testing functions }
+
+function InRange(const AValue, AMin, AMax: Integer): Boolean; overload;
+function InRange(const AValue, AMin, AMax: Int64): Boolean; overload;
+function InRange(const AValue, AMin, AMax: Double): Boolean; overload;
+
+{ Range truncation functions }
+
+function EnsureRange(const AValue, AMin, AMax: Integer): Integer; overload;
+function EnsureRange(const AValue, AMin, AMax: Int64): Int64; overload;
+function EnsureRange(const AValue, AMin, AMax: Double): Double; overload;
+
+{ 16 bit integer division and remainder in one operation }
+
+procedure DivMod(Dividend: Integer; Divisor: Word;
+  var Result, Remainder: Word);
+
+
+{ Round to a specific digit or power of ten }
+{ ADigit has a valid range of 37 to -37.  Here are some valid examples
+  of ADigit values...
+   3 = 10^3  = 1000   = thousand's place
+   2 = 10^2  =  100   = hundred's place
+   1 = 10^1  =   10   = ten's place
+  -1 = 10^-1 = 1/10   = tenth's place
+  -2 = 10^-2 = 1/100  = hundredth's place
+  -3 = 10^-3 = 1/1000 = thousandth's place }
+
+type
+  TRoundToRange = -37..37;
+
+function RoundTo(const AValue: Double; const ADigit: TRoundToRange): Double;
+
+{ This variation of the RoundTo function follows the asymmetric arithmetic
+  rounding algorithm (if Frac(X) < .5 then return X else return X + 1).  This
+  function defaults to rounding to the hundredth's place (cents). }
+
+function SimpleRoundTo(const AValue: Double; const ADigit: TRoundToRange = -2): Double;
+
+{-----------------------------------------------------------------------
+Financial functions.  Standard set from Quattro Pro.
+
+Parameter conventions:
+
+From the point of view of A, amounts received by A are positive and
+amounts disbursed by A are negative (e.g. a borrower's loan repayments
+are regarded by the borrower as negative).
+
+Interest rates are per payment period.  11% annual percentage rate on a
+loan with 12 payments per year would be (11 / 100) / 12 = 0.00916667
+
+-----------------------------------------------------------------------}
+
+type
+  TPaymentTime = (ptEndOfPeriod, ptStartOfPeriod);
+
+{ Double Declining Balance (DDB) }
+function DoubleDecliningBalance(const Cost, Salvage: Extended;
+  Life, Period: Integer): Extended;
+
+{ Future Value (FVAL) }
+function FutureValue(const Rate: Extended; NPeriods: Integer; const Payment,
+  PresentValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Interest Payment (IPAYMT)  }
+function InterestPayment(const Rate: Extended; Period, NPeriods: Integer;
+  const PresentValue, FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Interest Rate (IRATE) }
+function InterestRate(NPeriods: Integer; const Payment, PresentValue,
+  FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Internal Rate of Return. (IRR) Needs array of cash flows. }
+function InternalRateOfReturn(const Guess: Extended;
+  const CashFlows: array of Double): Extended;
+
+{ Number of Periods (NPER) }
+function NumberOfPeriods(const Rate: Extended; Payment: Extended;
+  const PresentValue, FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Net Present Value. (NPV) Needs array of cash flows. }
+function NetPresentValue(const Rate: Extended; const CashFlows: array of Double;
+  PaymentTime: TPaymentTime): Extended;
+
+{ Payment (PAYMT) }
+function Payment(Rate: Extended; NPeriods: Integer; const PresentValue,
+  FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Period Payment (PPAYMT) }
+function PeriodPayment(const Rate: Extended; Period, NPeriods: Integer;
+  const PresentValue, FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Present Value (PVAL) }
+function PresentValue(const Rate: Extended; NPeriods: Integer;
+  const Payment, FutureValue: Extended; PaymentTime: TPaymentTime): Extended;
+
+{ Straight Line depreciation (SLN) }
+function SLNDepreciation(const Cost, Salvage: Extended; Life: Integer): Extended;
+
+{ Sum-of-Years-Digits depreciation (SYD) }
+function SYDDepreciation(const Cost, Salvage: Extended; Life, Period: Integer): Extended;
+
+type
+  EInvalidArgument = class(EMathError) end;
+
+{-----------------------------------------------------------------------
+FPU exception/precision/rounding management
+
+The following functions allow you to control the behavior of the FPU.  With
+them you can control what constutes an FPU exception, what the default
+precision is used and finally how rounding is handled by the FPU.
+
+-----------------------------------------------------------------------}
+
+type
+  TFPURoundingMode = (rmNearest, rmDown, rmUp, rmTruncate);
+
+{ Return the current rounding mode }
+function GetRoundMode: TFPURoundingMode;
+
+{ Set the rounding mode and return the old mode }
+function SetRoundMode(const RoundMode: TFPURoundingMode): TFPURoundingMode;
+
+type
+  TFPUPrecisionMode = (pmSingle, pmReserved, pmDouble, pmExtended);
+
+{ Return the current precision control mode }
+function GetPrecisionMode: TFPUPrecisionMode;
+
+{ Set the precision control mode and return the old one }
+function SetPrecisionMode(const Precision: TFPUPrecisionMode): TFPUPrecisionMode;
+
+type
+  TFPUException = (exInvalidOp, exDenormalized, exZeroDivide,
+                   exOverflow, exUnderflow, exPrecision);
+  TFPUExceptionMask = set of TFPUException;
+
+{ Return the exception mask from the control word.
+  Any element set in the mask prevents the FPU from raising that kind of
+  exception.  Instead, it returns its best attempt at a value, often NaN or an
+  infinity. The value depends on the operation and the current rounding mode. }
+function GetExceptionMask: TFPUExceptionMask;
+
+{ Set a new exception mask and return the old one }
+function SetExceptionMask(const Mask: TFPUExceptionMask): TFPUExceptionMask;
+
+{ Clear any pending exception bits in the status word }
+procedure ClearExceptions;
+
+implementation
