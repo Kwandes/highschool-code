@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1552843280 source:x:\programming\stuff\testing vector double\main.cpp
+	<iostream>
+	<vector>
+	<map>
+	<math.h>
+	<iterator>
+
