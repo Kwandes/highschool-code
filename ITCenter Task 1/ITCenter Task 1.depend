@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1539294143 source:x:\programming\stuff\itcenter task 1\main.cpp
+	<iostream>
+	<cmath>
+	<vector>
+	<algorithm>
+
