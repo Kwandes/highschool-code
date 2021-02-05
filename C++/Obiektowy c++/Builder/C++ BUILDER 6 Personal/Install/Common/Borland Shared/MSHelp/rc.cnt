@@ -1,4 +1,0 @@
-:TITLE Resource Compiler User's Guide
-:INDEX Resource Compiler User's Guide = rc.hlp
-:INCLUDE WIN32SDK.CFG
-:INCLUDE RC.TOC
